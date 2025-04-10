@@ -3,3 +3,28 @@ changes
 # commit
 #pull #push commands
 qhjdgjgdg
+ 
+
+Git init
+Git clone
+Git add
+Git branch
+Git commit
+Git push
+Git pull
+Git checkout
+Git merge
+Git status
+Git remote
+Git config
+Git log
+Git diff
+Git reset
+Git stash
+Git fetch
+Git rebase
+Git reflog
+Git branch -d [branch name]
+Git branch [branch name]
+Git cherry-pick commands
+Git commit -am “<commit-message>”
