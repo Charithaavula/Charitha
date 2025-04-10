@@ -1,4 +1,4 @@
-# GitHub Command Cheat Sheet
+# GitHub Command Cheat Sheet - basic commands
 
 Basic Git Commands
 - `git init` - Initialize a new Git repository.
