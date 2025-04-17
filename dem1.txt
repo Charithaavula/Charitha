@@ -1,0 +1,145 @@
+******************************************************************
+* Program Name: ORDER-MENU
+* Author: ABC GROUP OF INDIA
+* Date Written: 2023-10-05
+* 
+* Description:
+* This COBOL program implements an Order Management System Menu
+* using CICS. It displays a menu screen to the user with options
+* to execute different programs such as:
+*   1. Item Inquiry Program
+*   2. Customer Details Update Program
+*   3. Order Update Program
+* 
+* The user can select an option by positioning the cursor on the 
+* required line. The program evaluates the cursor position and 
+* executes the corresponding procedure. Invalid choices prompt 
+* the user to try again.
+* 
+* Additional Feature:
+* Displays the current date and time on the menu screen.
+******************************************************************
+
+IDENTIFICATION DIVISION.
+PROGRAM-ID. ORDER-MENU-CICS.
+AUTHOR. "ABC GROUP OF INDIA".
+DATE-WRITTEN. "2023-10-05".
+
+ENVIRONMENT DIVISION.
+CONFIGURATION SECTION.
+
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01 WS-CURSOR-POSITION        PIC 9(4) VALUE 0.
+01 WS-PF-KEY                 PIC X(2) VALUE SPACES.
+01 WS-DATE-TIME.
+    05 WS-DATE               PIC X(10).  * Format: YYYY-MM-DD
+    05 WS-TIME               PIC X(8).   * Format: HH:MM:SS
+01 WS-TIMESTAMP              PIC S9(15) COMP-3.  * CICS Timestamp
+
+EXEC CICS DFHCOMMAREA LENGTH(100) END-EXEC.
+
+LINKAGE SECTION.
+01 DFHCOMMAREA.
+    05 USER-CHOICE        PIC 9.
+
+PROCEDURE DIVISION.
+MAIN-PROCEDURE.
+    PERFORM GET-DATE-TIME.
+    PERFORM DISPLAY-MENU.
+    PERFORM PROCESS-CHOICE.
+    EXEC CICS RETURN END-EXEC.
+
+GET-DATE-TIME.
+    EXEC CICS ASKTIME ABSTIME(WS-TIMESTAMP) END-EXEC.
+    EXEC CICS FORMATTIME ABSTIME(WS-TIMESTAMP)
+        DATE(WS-DATE) TIME(WS-TIME) END-EXEC.
+
+DISPLAY-MENU.
+    EXEC CICS SEND MAP('MENU') MAPSET('ORDERMAP') ERASE END-EXEC.
+    EXEC CICS RECEIVE MAP('MENU') MAPSET('ORDERMAP') CURSOR INTO(WS-CURSOR-POSITION)
+        RESP(WS-PF-KEY) END-EXEC.
+
+PROCESS-CHOICE.
+    IF WS-PF-KEY = 'PF3'
+        EXEC CICS SEND TEXT
+            FROM('EXITING PROGRAM. THANK YOU!')
+            ERASE
+        END-EXEC
+        EXEC CICS RETURN END-EXEC
+    ELSE IF WS-PF-KEY = 'ENTER'
+        EVALUATE TRUE
+            WHEN WS-CURSOR-POSITION = 5020
+                PERFORM ITEM-INQUIRY
+            WHEN WS-CURSOR-POSITION = 6020
+                PERFORM CUSTOMER-DETAILS-UPDATE
+            WHEN WS-CURSOR-POSITION = 7020
+                PERFORM ORDER-UPDATE
+            WHEN OTHER
+                EXEC CICS SEND TEXT
+                    FROM('INVALID CHOICE. PLEASE TRY AGAIN.')
+                    ERASE
+                END-EXEC
+                PERFORM DISPLAY-MENU
+        END-EVALUATE
+    ELSE
+        EXEC CICS SEND TEXT
+            FROM('INVALID PF KEY. PLEASE USE ENTER OR PF3.')
+            ERASE
+        END-EXEC
+        PERFORM DISPLAY-MENU
+    END-IF.
+
+ITEM-INQUIRY.
+    EXEC CICS SEND TEXT
+        FROM('ITEM INQUIRY PROGRAM EXECUTED.')
+        ERASE
+    END-EXEC.
+
+CUSTOMER-DETAILS-UPDATE.
+    EXEC CICS SEND TEXT
+        FROM('CUSTOMER DETAILS UPDATE PROGRAM EXECUTED.')
+        ERASE
+    END-EXEC.
+
+ORDER-UPDATE.
+    EXEC CICS SEND TEXT
+        FROM('ORDER UPDATE PROGRAM EXECUTED.')
+        ERASE
+    END-EXEC.
+
+
+####### map and mapset representation
+
+ORDERMAP DFHMSD TYPE=&SYSPARM,LANG=COBOL,MODE=INOUT,STORAGE=AUTO
+         CTRL=FREEKB,TERM=3270
+
+MENU     DFHMDI SIZE=(24,80),COLOR=YES,CTRL=FREEKB
+
+TITLE    DFHMDF POS=(3,20),LENGTH=30,ATTRB=(ASKIP,HIGH),COLOR=GREEN,
+         INITIAL="ORDER MANAGEMENT SYSTEM MENU"
+
+DATE-TIME DFHMDF POS=(4,20),LENGTH=20,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="DATE: YYYY-MM-DD TIME: HH:MM:SS"
+
+OPTION1  DFHMDF POS=(6,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="1. ITEM INQUIRY PROGRAM"
+
+OPTION2  DFHMDF POS=(7,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="2. CUSTOMER DETAILS UPDATE PROGRAM"
+
+OPTION3  DFHMDF POS=(8,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="3. ORDER UPDATE PROGRAM"
+
+INSTR1   DFHMDF POS=(10,20),LENGTH=50,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="(POSITION CURSOR ON REQUIRED LINE TO EXECUTE PROGRAM)"
+
+INSTR2   DFHMDF POS=(14,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="ENTER = TO PROCESS, PF3 = TO EXIT"
+
+INSTR3   DFHMDF POS=(16,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="ALL OTHER PF KEYS ARE INVALID"
+
+         DFHMSD TYPE=FINAL
+
+
