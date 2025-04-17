@@ -4,6 +4,114 @@
 * Date Written: 2023-10-05
 * 
 * Description:
+* This COBOL program implements an Order Management System Menu.
+* It displays a menu screen to the user with options to execute 
+* different programs such as:
+*   1. Item Inquiry Program
+*   2. Customer Details Update Program
+*   3. Order Update Program
+* 
+* The user can select an option by entering the corresponding 
+* number or positioning the cursor on the required line. The 
+* program evaluates the user's choice and executes the 
+* corresponding procedure. Invalid choices prompt the user to 
+* try again.
+* 
+* Features:
+* - Menu-driven interface using the SCREEN SECTION.
+* - Handles user input and validates the choice.
+* - Executes specific procedures based on the user's selection.
+* 
+* File Usage:
+* - CURSOR.DAT: Used to manage cursor positioning.
+* 
+* Procedures:
+* - ITEM-INQUIRY: Displays a message indicating the execution 
+*   of the Item Inquiry Program.
+* - CUSTOMER-DETAILS-UPDATE: Displays a message indicating the 
+*   execution of the Customer Details Update Program.
+* - ORDER-UPDATE: Displays a message indicating the execution 
+*   of the Order Update Program.
+* 
+* Notes:
+* - The program uses EVALUATE statements for decision-making.
+* - Invalid choices loop back to the main menu.
+* 
+* Usage:
+* - Run the program and follow the on-screen instructions to 
+*   select and execute the desired option.
+******************************************************************
+IDENTIFICATION DIVISION.
+PROGRAM-ID. ORDER-MENU.
+AUTHOR. "ABC GROUP OF INDIA".
+DATE-WRITTEN. "2023-10-05".
+ENVIRONMENT DIVISION.
+CONFIGURATION SECTION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+    SELECT OPTIONAL CURSOR-FILE ASSIGN TO "CURSOR.DAT".
+
+DATA DIVISION.
+FILE SECTION.
+FD  CURSOR-FILE.
+01  CURSOR-RECORD.
+    05  CURSOR-POSITION       PIC 9(2).
+
+WORKING-STORAGE SECTION.
+01 WS-CURSOR-POSITION        PIC 9(2) VALUE 0.
+01 WS-USER-CHOICE            PIC 9 VALUE 0.
+WORKING-STORAGE SECTION.
+01 WS-USER-CHOICE        PIC 9 VALUE 0.
+
+SCREEN SECTION.
+01 MENU-SCREEN.
+    05 BLANK SCREEN.
+    05 LINE 3  COLUMN 20 VALUE "ORDER MANAGEMENT SYSTEM MENU" 
+    FOREGROUND-COLOR 2.
+    05 LINE 5  COLUMN 20 VALUE "1. ITEM INQUIRY PROGRAM".
+    05 LINE 6  COLUMN 20 VALUE "2. CUSTOMER DETAILS UPDATE PROGRAM".
+    05 LINE 7  COLUMN 20 VALUE "3. ORDER UPDATE PROGRAM".
+    05 LINE 9  COLUMN 20 VALUE "(POSITION CURSOR ON REQUIRED LINE TO EXECUTE PROGRAM)".
+    05 LINE 11 COLUMN 20 VALUE "ENTER YOUR CHOICE: ".
+    05 LINE 11 COLUMN 40 PIC 9 USING WS-USER-CHOICE.
+    05 LINE 13 COLUMN 20 VALUE "ENTER = TO PROCESS, PF3 = TO EXIT".
+    05 LINE 15 COLUMN 20 VALUE "ALL OTHER PF KEYS ARE INVALID.".
+PROCEDURE DIVISION.
+MAIN-PROCEDURE.
+    DISPLAY MENU-SCREEN.
+    ACCEPT MENU-SCREEN.
+
+    EVALUATE WS-USER-CHOICE
+     WHEN 1
+         PERFORM ITEM-INQUIRY
+     WHEN 2
+         PERFORM CUSTOMER-DETAILS-UPDATE
+     WHEN 3
+         PERFORM ORDER-UPDATE
+     WHEN OTHER
+         DISPLAY "INVALID CHOICE. PLEASE TRY AGAIN."
+         PERFORM MAIN-PROCEDURE
+    END-EVALUATE.
+
+    STOP RUN.
+
+ITEM-INQUIRY.
+    DISPLAY "ITEM INQUIRY PROGRAM EXECUTED.".
+
+CUSTOMER-DETAILS-UPDATE.
+    DISPLAY "CUSTOMER DETAILS UPDATE PROGRAM EXECUTED.".
+
+ORDER-UPDATE.
+    DISPLAY "ORDER UPDATE PROGRAM EXECUTED.".
+
+
+###### including choices in CICS
+******************************************************************
+* Program Name: ORDER-MENU
+* Author: ABC GROUP OF INDIA
+* Date Written: 2023-10-05
+* 
+* Description:
 * This COBOL program implements an Order Management System Menu
 * using CICS. It displays a menu screen to the user with options
 * to execute different programs such as:
@@ -11,13 +119,10 @@
 *   2. Customer Details Update Program
 *   3. Order Update Program
 * 
-* The user can select an option by positioning the cursor on the 
-* required line. The program evaluates the cursor position and 
-* executes the corresponding procedure. Invalid choices prompt 
-* the user to try again.
-* 
-* Additional Feature:
-* Displays the current date and time on the menu screen.
+* The user can select an option by entering the corresponding 
+* number. The program evaluates the user's choice and executes 
+* the corresponding procedure. Invalid choices prompt the user 
+* to try again.
 ******************************************************************
 
 IDENTIFICATION DIVISION.
@@ -30,12 +135,7 @@ CONFIGURATION SECTION.
 
 DATA DIVISION.
 WORKING-STORAGE SECTION.
-01 WS-CURSOR-POSITION        PIC 9(4) VALUE 0.
-01 WS-PF-KEY                 PIC X(2) VALUE SPACES.
-01 WS-DATE-TIME.
-    05 WS-DATE               PIC X(10).  * Format: YYYY-MM-DD
-    05 WS-TIME               PIC X(8).   * Format: HH:MM:SS
-01 WS-TIMESTAMP              PIC S9(15) COMP-3.  * CICS Timestamp
+01 WS-USER-CHOICE        PIC 9 VALUE 0.
 
 EXEC CICS DFHCOMMAREA LENGTH(100) END-EXEC.
 
@@ -45,50 +145,31 @@ LINKAGE SECTION.
 
 PROCEDURE DIVISION.
 MAIN-PROCEDURE.
-    PERFORM GET-DATE-TIME.
     PERFORM DISPLAY-MENU.
     PERFORM PROCESS-CHOICE.
     EXEC CICS RETURN END-EXEC.
 
-GET-DATE-TIME.
-    EXEC CICS ASKTIME ABSTIME(WS-TIMESTAMP) END-EXEC.
-    EXEC CICS FORMATTIME ABSTIME(WS-TIMESTAMP)
-        DATE(WS-DATE) TIME(WS-TIME) END-EXEC.
-
 DISPLAY-MENU.
     EXEC CICS SEND MAP('MENU') MAPSET('ORDERMAP') ERASE END-EXEC.
-    EXEC CICS RECEIVE MAP('MENU') MAPSET('ORDERMAP') CURSOR INTO(WS-CURSOR-POSITION)
-        RESP(WS-PF-KEY) END-EXEC.
+    EXEC CICS RECEIVE MAP('MENU') MAPSET('ORDERMAP') INTO(WS-USER-CHOICE) END-EXEC.
 
-PROCESS-CHOICE.
-    IF WS-PF-KEY = 'PF3'
-        EXEC CICS SEND TEXT
-            FROM('EXITING PROGRAM. THANK YOU!')
-            ERASE
-        END-EXEC
-        EXEC CICS RETURN END-EXEC
-    ELSE IF WS-PF-KEY = 'ENTER'
-        EVALUATE TRUE
-            WHEN WS-CURSOR-POSITION = 5020
-                PERFORM ITEM-INQUIRY
-            WHEN WS-CURSOR-POSITION = 6020
-                PERFORM CUSTOMER-DETAILS-UPDATE
-            WHEN WS-CURSOR-POSITION = 7020
-                PERFORM ORDER-UPDATE
-            WHEN OTHER
-                EXEC CICS SEND TEXT
-                    FROM('INVALID CHOICE. PLEASE TRY AGAIN.')
-                    ERASE
-                END-EXEC
-                PERFORM DISPLAY-MENU
-        END-EVALUATE
-    ELSE
-        EXEC CICS SEND TEXT
-            FROM('INVALID PF KEY. PLEASE USE ENTER OR PF3.')
-            ERASE
-        END-EXEC
-        PERFORM DISPLAY-MENU
-    END-IF.
+PPROCESS-CHOICE.
+    EXEC CICS ASSIGN CURSORPOS(WS-CURSOR-POSITION) END-EXEC.
+
+    EVALUATE TRUE
+        WHEN WS-CURSOR-POSITION = 5020
+            PERFORM ITEM-INQUIRY
+        WHEN WS-CURSOR-POSITION = 6020
+            PERFORM CUSTOMER-DETAILS-UPDATE
+        WHEN WS-CURSOR-POSITION = 7020
+            PERFORM ORDER-UPDATE
+        WHEN OTHER
+            EXEC CICS SEND TEXT
+                FROM('INVALID CHOICE. PLEASE TRY AGAIN.')
+                ERASE
+            END-EXEC
+            PERFORM DISPLAY-MENU
+    END-EVALUATE.
 
 ITEM-INQUIRY.
     EXEC CICS SEND TEXT
@@ -119,27 +200,30 @@ MENU     DFHMDI SIZE=(24,80),COLOR=YES,CTRL=FREEKB
 TITLE    DFHMDF POS=(3,20),LENGTH=30,ATTRB=(ASKIP,HIGH),COLOR=GREEN,
          INITIAL="ORDER MANAGEMENT SYSTEM MENU"
 
-DATE-TIME DFHMDF POS=(4,20),LENGTH=20,ATTRB=(ASKIP),COLOR=WHITE,
-         INITIAL="DATE: YYYY-MM-DD TIME: HH:MM:SS"
-
-OPTION1  DFHMDF POS=(6,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+OPTION1  DFHMDF POS=(5,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="1. ITEM INQUIRY PROGRAM"
 
-OPTION2  DFHMDF POS=(7,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+OPTION2  DFHMDF POS=(6,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="2. CUSTOMER DETAILS UPDATE PROGRAM"
 
-OPTION3  DFHMDF POS=(8,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
+OPTION3  DFHMDF POS=(7,20),LENGTH=30,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="3. ORDER UPDATE PROGRAM"
 
-INSTR1   DFHMDF POS=(10,20),LENGTH=50,ATTRB=(ASKIP),COLOR=WHITE,
+INSTR1   DFHMDF POS=(9,20),LENGTH=50,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="(POSITION CURSOR ON REQUIRED LINE TO EXECUTE PROGRAM)"
 
-INSTR2   DFHMDF POS=(14,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
+PROMPT   DFHMDF POS=(11,20),LENGTH=20,ATTRB=(ASKIP),COLOR=WHITE,
+         INITIAL="ENTER YOUR CHOICE:"
+
+CHOICE   DFHMDF POS=(11,40),LENGTH=1,ATTRB=(UNPROT,FSET),COLOR=WHITE
+
+INSTR2   DFHMDF POS=(13,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="ENTER = TO PROCESS, PF3 = TO EXIT"
 
-INSTR3   DFHMDF POS=(16,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
+INSTR3   DFHMDF POS=(15,20),LENGTH=40,ATTRB=(ASKIP),COLOR=WHITE,
          INITIAL="ALL OTHER PF KEYS ARE INVALID"
 
          DFHMSD TYPE=FINAL
+
 
 
