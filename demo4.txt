@@ -1,0 +1,526 @@
+ORDERUPD DFHMSD TYPE=MAP,MODE=INOUT,LANG=COBOL
+         DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,CTRL=FREEKB
+
+ORDERMAP DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,CTRL=FREEKB
+         DFHMDF POS=(1,2),LENGTH=20,INITIAL='DATE: ',ATTRB=(ASKIP)
+         DFHMDF POS=(1,30),LENGTH=20,INITIAL='TIME: ',ATTRB=(ASKIP)
+         DFHMDF POS=(3,2),LENGTH=25,INITIAL='ORDER UPDATE PROGRAM',ATTRB=(ASKIP)
+         DFHMDF POS=(5,2),LENGTH=15,INITIAL='PAYMENT TYPE :',ATTRB=(ASKIP)
+         DFHMDF POS=(5,18),LENGTH=3,ATTRB=(UNPROT)
+         DFHMDF POS=(6,2),LENGTH=15,INITIAL='ITEM CODE    :',ATTRB=(ASKIP)
+         DFHMDF POS=(6,18),LENGTH=7,ATTRB=(UNPROT)
+         DFHMDF POS=(7,2),LENGTH=15,INITIAL='CUST CODE    :',ATTRB=(ASKIP)
+         DFHMDF POS=(7,18),LENGTH=7,ATTRB=(UNPROT)
+         DFHMDF POS=(8,2),LENGTH=15,INITIAL='ITEM QTY     :',ATTRB=(ASKIP)
+         DFHMDF POS=(8,18),LENGTH=5,ATTRB=(UNPROT)
+         DFHMDF POS=(10,2),LENGTH=70,INITIAL='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',ATTRB=(ASKIP)
+         DFHMDF POS=(12,2),LENGTH=40,INITIAL='ENTER = TO PROCESS   PF3 = TO EXIT',ATTRB=(ASKIP)
+
+         DFHMSD TYPE=FINAL
+
+****************JCL to Define and Create the KSDS**************
+//DEFINEKS JOB (ACCT),'DEFINE KSDS',CLASS=A,MSGCLASS=A
+//STEP1    EXEC PGM=IDCAMS
+//SYSPRINT DD  SYSOUT=*
+//SYSIN    DD  *
+  DEFINE CLUSTER (NAME(ORDER.TRANSACTION.FILE) -
+                  INDEXED -
+                  KEYS(7 0) -
+                  RECORDSIZE(50 100) -
+                  TRACKS(1 1) -
+                  CISZ(4096) -
+                  FREESPACE(0 0)) -
+          DATA (NAME(ORDER.TRANSACTION.FILE.DATA)) -
+          INDEX (NAME(ORDER.TRANSACTION.FILE.INDEX))
+/*
+//
+
+***************************************************************
+******************************************************************
+* PROGRAM NAME: ORDERUPD
+* DESCRIPTION: This COBOL program is designed to update orders 
+*              in an indexed VSAM file. It validates user input, 
+*              checks stock availability, and inserts new orders 
+*              into the ORDER-FILE.
+*
+* FILES USED:
+*   1. ORDER-FILE: Indexed VSAM file to store order records.
+*      - Primary Key: ORDER-CODE
+*   2. ITEM-MASTER-FILE: Indexed file to store item details.
+*      - Primary Key: ITEM-CODE
+*   3. CUSTOMER-MASTER-FILE: Indexed file to store customer details.
+*      - Primary Key: CUSTOMER-CODE
+*
+* WORKING-STORAGE VARIABLES:
+*   - WS-FILE-STATUS: Holds the status of file operations.
+*   - WS-CURRENT-DATE: Stores the current date.
+*   - WS-ORDER-NUMBER: Tracks the next order number.
+*   - WS-USER-INPUT: Captures user input for processing.
+*   - WS-ERROR-MESSAGE: Stores error messages for invalid input.
+*   - WS-VALID-PAYMENT-TYPE: Validates payment type (COD/NET).
+*   - WS-VALID-FLAG: Indicates if input validation passed.
+*
+* MAIN LOGIC:
+*   1. DISPLAY-SCREEN: Displays the program interface.
+*   2. ACCEPT-INPUT: Accepts user input for order details.
+*   3. VALIDATE-INPUT: Validates the user input:
+*      - Checks payment type.
+*      - Verifies ITEM-CODE exists in ITEM-MASTER-FILE.
+*      - Ensures ITEM-QTY does not exceed ITEM-STOCK-QTY.
+*      - Verifies CUSTOMER-CODE exists in CUSTOMER-MASTER-FILE.
+*   4. INSERT-ORDER: Inserts a new order into ORDER-FILE if input is valid.
+*   5. DISPLAY-ERROR: Displays error messages for invalid input.
+*
+* USER INTERACTIONS:
+*   - ENTER: Processes the input and inserts the order if valid.
+*   - PF3: Exits the program.
+*
+* ERROR HANDLING:
+*   - Displays appropriate error messages for invalid input.
+*   - Handles file operation errors during READ and WRITE operations.
+*
+* AUTHOR: [Your Name]
+* DATE: 21-APR-2025
+******************************************************************
+   IDENTIFICATION DIVISION.
+   PROGRAM-ID. ORDERUPD.
+
+   ENVIRONMENT DIVISION.
+   INPUT-OUTPUT SECTION.
+   FILE-CONTROL.
+       SELECT ORDER-FILE ASSIGN TO VSAM-ORDER-FILE
+           ORGANIZATION IS INDEXED
+           ACCESS MODE IS RANDOM
+           RECORD KEY IS ORDER-CODE
+           FILE STATUS IS WS-FILE-STATUS.
+
+       SELECT ITEM-MASTER-FILE ASSIGN TO DISK-ITEM-MASTER
+           ORGANIZATION IS INDEXED
+           ACCESS MODE IS RANDOM
+           RECORD KEY IS ITEM-CODE
+           FILE STATUS IS WS-FILE-STATUS.
+
+       SELECT CUSTOMER-MASTER-FILE ASSIGN TO DISK-CUSTOMER-MASTER
+           ORGANIZATION IS INDEXED
+           ACCESS MODE IS RANDOM
+           RECORD KEY IS CUSTOMER-CODE
+           FILE STATUS IS WS-FILE-STATUS.
+
+   DATA DIVISION.
+   FILE SECTION.
+   FD  ORDER-FILE.
+   01  ORDER-RECORD.
+       05  ORDER-CODE       PIC 9(07).  *> Primary Key
+       05  CUSTOMER-CODE    PIC 9(07).
+       05  ITEM-CODE        PIC 9(07).
+       05  ITEM-QTY         PIC 9(05).
+       05  ORDER-DATE       PIC X(08).
+       05  PAYMENT-TYPE     PIC X(03).
+
+   FD  ITEM-MASTER-FILE.
+   01  ITEM-MASTER-RECORD.
+       05  ITEM-CODE        PIC 9(07).
+       05  ITEM-STOCK-QTY   PIC 9(05).
+
+   FD  CUSTOMER-MASTER-FILE.
+   01  CUSTOMER-MASTER-RECORD.
+       05  CUSTOMER-CODE    PIC 9(07).
+
+   WORKING-STORAGE SECTION.
+   01  WS-FILE-STATUS       PIC XX.
+   01  WS-CURRENT-DATE      PIC X(08).
+   01  WS-ORDER-NUMBER      PIC 9(07) VALUE 1000001.
+   01  WS-USER-INPUT        PIC X(02).
+   01  WS-ERROR-MESSAGE     PIC X(50).
+   01  WS-VALID-PAYMENT-TYPE PIC X(03).
+   01  WS-VALID-FLAG        PIC X VALUE "N".
+
+   PROCEDURE DIVISION.
+   MAIN-PARA.
+       DISPLAY "ORDER UPDATE PROGRAM STARTED".
+       PERFORM DISPLAY-SCREEN.
+       PERFORM UNTIL WS-USER-INPUT = "03" *> PF3 Key
+           PERFORM ACCEPT-INPUT
+           IF WS-USER-INPUT = "03"
+               DISPLAY "RETURNING TO MENU PROGRAM..."
+               EXIT PROGRAM
+           ELSE IF WS-USER-INPUT = "ENTER"
+               PERFORM VALIDATE-INPUT
+               IF WS-VALID-FLAG = "Y"
+                   PERFORM INSERT-ORDER
+               ELSE
+                   PERFORM DISPLAY-ERROR
+               END-IF
+           ELSE
+               DISPLAY "INVALID PF KEY. PLEASE TRY AGAIN."
+           END-IF
+       END-PERFORM.
+       STOP RUN.
+
+   DISPLAY-SCREEN.
+       DISPLAY "DATE: 21-APR-2025".
+       DISPLAY "TIME: 10:00:00".
+       DISPLAY "ORDER UPDATE PROGRAM".
+       DISPLAY "PAYMENT TYPE : ".
+       DISPLAY "ITEM CODE    : ".
+       DISPLAY "CUST CODE    : ".
+       DISPLAY "ITEM QTY     : ".
+       DISPLAY "ENTER = TO PROCESS   PF3 = TO EXIT".
+
+   ACCEPT-INPUT.
+       DISPLAY "ENTER PAYMENT TYPE (COD/NET): ".
+       ACCEPT PAYMENT-TYPE.
+       DISPLAY "ENTER ITEM CODE: ".
+       ACCEPT ITEM-CODE.
+       DISPLAY "ENTER CUSTOMER CODE: ".
+       ACCEPT CUSTOMER-CODE.
+       DISPLAY "ENTER ITEM QUANTITY: ".
+       ACCEPT ITEM-QTY.
+       DISPLAY "PRESS ENTER TO PROCESS OR PF3 TO EXIT".
+       ACCEPT WS-USER-INPUT.
+
+   VALIDATE-INPUT.
+       MOVE "N" TO WS-VALID-FLAG.
+       MOVE SPACES TO WS-ERROR-MESSAGE.
+       IF PAYMENT-TYPE NOT = "COD" AND PAYMENT-TYPE NOT = "NET"
+           MOVE "INVALID PAYMENT TYPE" TO WS-ERROR-MESSAGE
+       ELSE
+           READ ITEM-MASTER-FILE
+               INVALID KEY MOVE "ITEM CODE NOT FOUND" TO WS-ERROR-MESSAGE
+           END-READ
+           IF WS-ERROR-MESSAGE = SPACES
+               IF ITEM-QTY > ITEM-STOCK-QTY
+                   MOVE "ITEM QTY EXCEEDS STOCK" TO WS-ERROR-MESSAGE
+               END-IF
+           END-IF
+           READ CUSTOMER-MASTER-FILE
+               INVALID KEY MOVE "CUSTOMER CODE NOT FOUND" TO WS-ERROR-MESSAGE
+           END-READ
+       END-IF.
+       IF WS-ERROR-MESSAGE = SPACES
+           MOVE "Y" TO WS-VALID-FLAG
+       END-IF.
+
+   INSERT-ORDER.
+       MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-DATE.
+       MOVE WS-ORDER-NUMBER TO ORDER-CODE.
+       ADD 1 TO WS-ORDER-NUMBER.
+       MOVE CUSTOMER-CODE TO ORDER-RECORD.
+       MOVE ITEM-CODE TO ORDER-RECORD.
+       MOVE ITEM-QTY TO ORDER-RECORD.
+       MOVE WS-CURRENT-DATE TO ORDER-DATE.
+       MOVE PAYMENT-TYPE TO ORDER-RECORD.
+       WRITE ORDER-RECORD
+           INVALID KEY DISPLAY "ERROR INSERTING ORDER".
+       DISPLAY "ORDER INSERTED SUCCESSFULLY".
+
+   DISPLAY-ERROR.
+       DISPLAY WS-ERROR-MESSAGE.
+       DISPLAY "PLEASE CORRECT THE INPUT.".
+
+*****************************TEST CASES***************
+Test Case 1: Validate Successful Order Insertion
+------------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567 (exists in ITEM-MASTER-FILE with ITEM-STOCK-QTY >= ITEM-QTY)
+- CUSTOMER-CODE: 7654321 (exists in CUSTOMER-MASTER-FILE)
+- ITEM-QTY: 10
+
+Expected Output:
+- "ORDER INSERTED SUCCESSFULLY"
+- ORDER-RECORD written with correct details.
+
+Test Case 2: Validate Invalid Payment Type
+------------------------------------------
+Input:
+- PAYMENT-TYPE: XYZ
+- ITEM-CODE: 1234567
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "INVALID PAYMENT TYPE"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 3: Validate Item Code Not Found
+-----------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 9999999 (does not exist in ITEM-MASTER-FILE)
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "ITEM CODE NOT FOUND"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 4: Validate Customer Code Not Found
+---------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567
+- CUSTOMER-CODE: 9999999 (does not exist in CUSTOMER-MASTER-FILE)
+- ITEM-QTY: 10
+
+Expected Output:
+- "CUSTOMER CODE NOT FOUND"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 5: Validate Item Quantity Exceeds Stock
+-------------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567 (exists in ITEM-MASTER-FILE with ITEM-STOCK-QTY = 5)
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "ITEM QTY EXCEEDS STOCK"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 6: Validate Exit Program
+----------------------------------
+Input:
+- WS-USER-INPUT: 03 (PF3 Key)
+
+Expected Output:
+- "RETURNING TO MENU PROGRAM..."
+- Program exits successfully.
+
+Test Case 7: Validate Invalid PF Key
+------------------------------------
+Input:
+- WS-USER-INPUT: 99 (Invalid PF Key)
+
+Expected Output:
+- "INVALID PF KEY. PLEASE TRY AGAIN."       
+
+
+******************************EXPLAINATION******************
+GitHub Copilot
+Step-by-Step Explanation of the Code:
+1. IDENTIFICATION DIVISION
+The program is identified as ORDERUPD.
+This division specifies the name of the program and serves as the entry point for the COBOL compiler.
+2. ENVIRONMENT DIVISION
+INPUT-OUTPUT SECTION:
+Defines the files used by the program and their attributes.
+File Definitions:
+
+ORDER-FILE:
+
+A VSAM indexed file used to store order records.
+The primary key is ORDER-CODE.
+Access mode is RANDOM, allowing direct access to records.
+File status is tracked using WS-FILE-STATUS.
+
+ITEM-MASTER-FILE:
+
+A VSAM indexed file used to store item details.
+The primary key is ITEM-CODE.
+Access mode is RANDOM.
+Used to validate item existence and check stock availability.
+
+CUSTOMER-MASTER-FILE:
+
+A VSAM indexed file used to store customer details.
+The primary key is CUSTOMER-CODE.
+Access mode is RANDOM.
+Used to validate customer existence.
+
+3. DATA DIVISION
+
+FILE SECTION:
+
+Defines the structure of the records for each file.
+File Record Definitions:
+
+ORDER-RECORD:
+
+Contains fields for:
+ORDER-CODE: Primary key for the order.
+CUSTOMER-CODE: Code of the customer placing the order.
+ITEM-CODE: Code of the item being ordered.
+ITEM-QTY: Quantity of the item being ordered.
+ORDER-DATE: Date of the order.
+PAYMENT-TYPE: Payment method (e.g., COD or NET).
+
+ITEM-MASTER-RECORD:
+
+Contains fields for:
+ITEM-CODE: Primary key for the item.
+ITEM-STOCK-QTY: Quantity of the item available in stock.
+
+CUSTOMER-MASTER-RECORD:
+
+Contains fields for:
+CUSTOMER-CODE: Primary key for the customer.
+WORKING-STORAGE SECTION:
+Defines variables used during program execution:
+WS-FILE-STATUS: Tracks the status of file operations.
+WS-CURRENT-DATE: Stores the current date for order creation.
+WS-ORDER-NUMBER: Tracks the next order number to be generated.
+WS-USER-INPUT: Captures user input for processing (e.g., ENTER or PF3).
+WS-ERROR-MESSAGE: Stores error messages for invalid input.
+WS-VALID-FLAG: Indicates whether input validation passed (Y for valid, N for invalid).
+
+4. PROCEDURE DIVISION
+Contains the main logic of the program.
+
+MAIN-PARA:
+
+Program Start:
+
+Displays a welcome message: "ORDER UPDATE PROGRAM STARTED".
+Calls DISPLAY-SCREEN to show the user interface.
+
+User Input Loop:
+
+The program enters a loop that continues until the user presses PF3 (WS-USER-INPUT = "03").
+Inside the loop:
+Calls ACCEPT-INPUT to collect user input.
+If PF3 is pressed, the program exits with a message: "RETURNING TO MENU PROGRAM...".
+If ENTER is pressed, the program validates the input by calling VALIDATE-INPUT.
+If validation passes (WS-VALID-FLAG = "Y"), it calls INSERT-ORDER to create a new order.
+If validation fails, it calls DISPLAY-ERROR to show the error message.
+For any other key, it displays: "INVALID PF KEY. PLEASE TRY AGAIN.".
+
+5. DISPLAY-SCREEN
+
+Displays the user interface with fields for:
+Payment Type
+Item Code
+Customer Code
+Item Quantity
+Instructions for ENTER and PF3.
+
+6. ACCEPT-INPUT
+
+Collects user input for:
+PAYMENT-TYPE: Must be COD or NET.
+ITEM-CODE: The code of the item being ordered.
+CUSTOMER-CODE: The code of the customer placing the order.
+ITEM-QTY: The quantity of the item being ordered.
+WS-USER-INPUT: Determines the action (ENTER, PF3, or invalid key).
+
+7. VALIDATE-INPUT
+
+Ensures the input is valid by performing the following checks:
+
+Payment Type:
+
+Must be COD (Cash on Delivery) or NET (Net Banking).
+If invalid, sets WS-ERROR-MESSAGE to "INVALID PAYMENT TYPE".
+
+Item Code:
+
+Reads the ITEM-MASTER-FILE to verify the existence of the ITEM-CODE.
+If not found, sets WS-ERROR-MESSAGE to "ITEM CODE NOT FOUND".
+
+Item Quantity:
+
+Checks if ITEM-QTY is less than or equal to ITEM-STOCK-QTY.
+If not, sets WS-ERROR-MESSAGE to "ITEM QTY EXCEEDS STOCK".
+
+Customer Code:
+
+Reads the CUSTOMER-MASTER-FILE to verify the existence of the CUSTOMER-CODE.
+If not found, sets WS-ERROR-MESSAGE to "CUSTOMER CODE NOT FOUND".
+If all validations pass, sets WS-VALID-FLAG to "Y".
+
+8. INSERT-ORDER
+
+Creates a new order record:
+Generates a unique ORDER-CODE using WS-ORDER-NUMBER.
+Sets the ORDER-DATE to the current date.
+Populates the ORDER-RECORD with validated input.
+Writes the ORDER-RECORD to the ORDER-FILE.
+Displays "ORDER INSERTED SUCCESSFULLY" if the operation succeeds.
+Displays "ERROR INSERTING ORDER" if the write operation fails.
+
+9. DISPLAY-ERROR
+
+Shows the error message stored in WS-ERROR-MESSAGE and prompts the user to correct their input.
+
+**************************************sample records***************
+1000001 7654321 1234567 00010 20250421 COD
+1000002 7654322 1234568 00005 20250421 NET
+1000003 7654323 1234569 00020 20250421 COD
+
+Each field corresponds to:
+ORDER-CODE (7 digits)
+CUSTOMER-CODE (7 digits)
+ITEM-CODE (7 digits)
+ITEM-QTY (5 digits)
+ORDER-DATE (8 characters, YYYYMMDD)
+PAYMENT-TYPE (3 characters)
+
+Define the KSDS File:
+//DEFINEKS JOB (ACCT),'DEFINE KSDS',CLASS=A,MSGCLASS=A
+//STEP1    EXEC PGM=IDCAMS
+//SYSPRINT DD  SYSOUT=*
+//SYSIN    DD  *
+  DEFINE CLUSTER (NAME(ORDER.TRANSACTION.FILE) -
+                  INDEXED -
+                  KEYS(7 0) -
+                  RECORDSIZE(50 100) -
+                  TRACKS(1 1) -
+                  CISZ(4096) -
+                  FREESPACE(0 0)) -
+          DATA (NAME(ORDER.TRANSACTION.FILE.DATA)) -
+          INDEX (NAME(ORDER.TRANSACTION.FILE.INDEX))
+/*
+
+Use the IDCAMS DEFINE CLUSTER command to create the KSDS file if it does not already exist.
+Example JCL to Define the KSDS:
+
+Load Records into the KSDS:
+
+Use the IDCAMS REPRO command to copy records from the input file into the KSDS.
+Example JCL to Load Records:
+//LOADKSDS JOB (ACCT),'LOAD KSDS',CLASS=A,MSGCLASS=A
+//STEP1    EXEC PGM=IDCAMS
+//SYSPRINT DD  SYSOUT=*
+//INFILE   DD  DSN=ORDER.INPUT.DATA,DISP=SHR
+//OUTFILE  DD  DSN=ORDER.TRANSACTION.FILE,DISP=SHR
+//SYSIN    DD  *
+  REPRO INFILE(INFILE) OUTFILE(OUTFILE)
+/*
+
+Explanation of the JCL:
+
+Input File (ORDER.INPUT.DATA):
+
+Contains the records to be loaded into the KSDS.
+Ensure the data format matches the KSDS record layout.
+KSDS File (ORDER.TRANSACTION.FILE):
+
+The target KSDS where the records will be loaded.
+Must be defined before running the REPRO step.
+
+IDCAMS REPRO:
+
+Copies records from the input file (INFILE) to the KSDS (OUTFILE).
+Steps to Execute:
+Create the input data file (ORDER.INPUT.DATA) with the required records.
+Run the JCL to define the KSDS if it does not already exist.
+Run the JCL to load the records into the KSDS using the REPRO command.
+Verify the records in the KSDS using a tool like File-AID or by writing a COBOL program to read and display the records.
+Example Input and Output:
+
+Input File (ORDER.INPUT.DATA):
+
+1000001 7654321 1234567 00010 20250421 COD
+1000002 7654322 1234568 00005 20250421 NET
+1000003 7654323 1234569 00020 20250421 COD
+
+KSDS Records After Loading:
+Record 1: ORDER-CODE=1000001, CUSTOMER-CODE=7654321, ITEM-CODE=1234567, ITEM-QTY=10, ORDER-DATE=20250421, PAYMENT-TYPE=COD
+Record 2: ORDER-CODE=1000002, CUSTOMER-CODE=7654322, ITEM-CODE=1234568, ITEM-QTY=5, ORDER-DATE=20250421, PAYMENT-TYPE=NET
+Record 3: ORDER-CODE=1000003, CUSTOMER-CODE=7654323, ITEM-CODE=1234569, ITEM-QTY=20, ORDER-DATE=20250421, PAYMENT-TYPE=COD
+This approach ensures that records are loaded into the KSDS efficiently without requiring a COBOL program. Let me know if you need further assistance!
+
+
+
+***************************************************************************
