@@ -1,0 +1,429 @@
+IDENTIFICATION DIVISION.
+   PROGRAM-ID. CUSTOMER-DETAILS-UPDATE.
+   AUTHOR. DEVELOPER_NAME.
+   DATE-WRITTEN. 17-APR-2025.
+
+   ENVIRONMENT DIVISION.
+   INPUT-OUTPUT SECTION.
+   FILE-CONTROL.
+       SELECT CUSTOMER-FILE ASSIGN TO "CUSTOMER.DAT"
+           ORGANIZATION IS LINE SEQUENTIAL.
+
+   DATA DIVISION.
+   FILE SECTION.
+   FD  CUSTOMER-FILE.
+   01  CUSTOMER-RECORD.
+       05  CUST-NO              PIC X(07).
+       05  CUST-NAME            PIC X(20).
+       05  CUST-ADDRESS         PIC X(30).
+       05  CUST-REGION          PIC X(03).
+       05  CUST-CONTACT-NO      PIC X(10).
+       05  CUST-EMAIL           PIC X(40).
+
+   WORKING-STORAGE SECTION.
+   01  WS-USER-INPUT            PIC X(01).
+   01  WS-FLAG-EOF              PIC X VALUE "N".
+   01  WS-CUST-NO               PIC X(07).
+   01  WS-FOUND-FLAG            PIC X VALUE "N".
+
+   PROCEDURE DIVISION.
+   MAIN-PARA.
+       PERFORM OPEN-FILES
+       PERFORM PROCESS-USER-INPUT
+       PERFORM CLOSE-FILES
+       STOP RUN.
+
+   OPEN-FILES.
+       OPEN I-O CUSTOMER-FILE.
+
+   PROCESS-USER-INPUT.
+       PERFORM UNTIL WS-FLAG-EOF = "Y"
+           DISPLAY "SELECT AN OPTION (ENTER=SEARCH, PF3=MENU, PF4=ADD, PF5=UPDATE, PF6=DELETE): " WITH NO ADVANCING
+           ACCEPT WS-USER-INPUT
+           EVALUATE WS-USER-INPUT
+               WHEN "ENTER"
+                   PERFORM SEARCH-RECORD
+               WHEN "3"
+                   PERFORM RETURN-TO-MENU
+               WHEN "4"
+                   PERFORM ADD-RECORD
+               WHEN "5"
+                   PERFORM UPDATE-RECORD
+               WHEN "6"
+                   PERFORM DELETE-RECORD
+               WHEN OTHER
+                   DISPLAY "INVALID OPTION. PLEASE TRY AGAIN."
+           END-EVALUATE
+       END-PERFORM.
+
+   SEARCH-RECORD.
+       DISPLAY "ENTER CUSTOMER NUMBER TO SEARCH: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC." WITH NO ADVANCING
+           EXIT.
+       END-IF
+
+       MOVE "N" TO WS-FOUND-FLAG
+       READ CUSTOMER-FILE
+           AT END
+               DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+           NOT AT END
+               PERFORM UNTIL WS-FOUND-FLAG = "Y" OR WS-FLAG-EOF = "Y"
+                   IF WS-CUST-NO = CUST-NO
+                       DISPLAY "CUSTOMER DETAILS:"
+                       DISPLAY "CUST NO: " CUST-NO
+                       DISPLAY "NAME: " CUST-NAME
+                       DISPLAY "ADDRESS: " CUST-ADDRESS
+                       DISPLAY "REGION: " CUST-REGION
+                       DISPLAY "CONTACT NO: " CUST-CONTACT-NO
+                       DISPLAY "EMAIL: " CUST-EMAIL
+                       MOVE "Y" TO WS-FOUND-FLAG
+                   ELSE
+                       READ CUSTOMER-FILE
+                           AT END
+                               MOVE "Y" TO WS-FLAG-EOF
+                       END-READ
+                   END-IF
+               END-PERFORM
+               IF WS-FOUND-FLAG = "N"
+                   DISPLAY "CUSTOMER NUMBER NOT FOUND."
+               END-IF
+       END-READ.
+
+   RETURN-TO-MENU.
+       DISPLAY "RETURNING TO MENU PROGRAM..."
+       MOVE "Y" TO WS-FLAG-EOF.
+
+   ADD-RECORD.
+       PERFORM VALIDATE-INPUT
+       IF WS-FOUND-FLAG = "N"
+           WRITE CUSTOMER-RECORD
+           DISPLAY "NEW CUSTOMER RECORD ADDED SUCCESSFULLY."
+       ELSE
+           DISPLAY "ERROR: CUSTOMER CODE ALREADY EXISTS."
+       END-IF.
+
+   UPDATE-RECORD.
+       PERFORM VALIDATE-INPUT
+       IF WS-FOUND-FLAG = "Y"
+           REWRITE CUSTOMER-RECORD
+           DISPLAY "CUSTOMER RECORD UPDATED SUCCESSFULLY."
+       ELSE
+           DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+       END-IF.
+
+   DELETE-RECORD.
+       DISPLAY "ENTER CUSTOMER NUMBER TO DELETE: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC."
+           EXIT.
+       END-IF
+       MOVE "N" TO WS-FOUND-FLAG
+       READ CUSTOMER-FILE
+           AT END
+               DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+           NOT AT END
+               IF WS-CUST-NO = CUST-NO
+                   DELETE CUSTOMER-FILE
+                   DISPLAY "CUSTOMER RECORD DELETED SUCCESSFULLY."
+                   MOVE "Y" TO WS-FOUND-FLAG
+               END-IF
+       END-READ.
+
+   VALIDATE-INPUT.
+       DISPLAY "ENTER CUSTOMER NUMBER: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC."
+           EXIT.
+       END-IF
+
+       MOVE "N" TO WS-FOUND-FLAG
+       READ CUSTOMER-FILE
+           AT END
+               MOVE "N" TO WS-FOUND-FLAG
+           NOT AT END
+               IF WS-CUST-NO = CUST-NO
+                   MOVE "Y" TO WS-FOUND-FLAG
+               END-IF
+       END-READ
+
+       IF WS-FOUND-FLAG = "N"
+           DISPLAY "ENTER CUSTOMER NAME: " WITH NO ADVANCING
+           ACCEPT CUST-NAME
+           IF CUST-NAME = SPACES
+               DISPLAY "ERROR: CUSTOMER NAME MUST NOT BE BLANK."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER ADDRESS: " WITH NO ADVANCING
+           ACCEPT CUST-ADDRESS
+           IF CUST-ADDRESS = SPACES
+               DISPLAY "ERROR: CUSTOMER ADDRESS MUST NOT BE BLANK."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER REGION: " WITH NO ADVANCING
+           ACCEPT CUST-REGION
+           IF CUST-REGION NOT = "MUM" AND
+              CUST-REGION NOT = "DEL" AND
+              CUST-REGION NOT = "BNG" AND
+              CUST-REGION NOT = "CHE" AND
+              CUST-REGION NOT = "HYD"
+               DISPLAY "ERROR: INVALID REGION. VALID REGIONS ARE MUM, DEL, BNG, CHE, HYD."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER CONTACT NO: " WITH NO ADVANCING
+           ACCEPT CUST-CONTACT-NO
+           IF NOT NUMERIC CUST-CONTACT-NO OR LENGTH OF CUST-CONTACT-NO NOT = 10
+               DISPLAY "ERROR: CONTACT NUMBER MUST BE NUMERIC AND 10 DIGITS."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER EMAIL: " WITH NO ADVANCING
+           ACCEPT CUST-EMAIL
+           IF FUNCTION NUM-OF-@-SIGNS(CUST-EMAIL) NOT = 1
+               DISPLAY "ERROR: EMAIL MUST CONTAIN EXACTLY ONE '@' SIGN."
+               EXIT.
+           END-IF
+       END-IF.
+
+   CLOSE-FILES.
+       CLOSE CUSTOMER-FILE.
+
+
+
+
+  ############ Applying ksds files the code will be##########################
+   IDENTIFICATION DIVISION.
+   PROGRAM-ID. CUSTOMER-DETAILS-UPDATE.
+   AUTHOR. DEVELOPER_NAME.
+   DATE-WRITTEN. 17-APR-2025.
+
+   ENVIRONMENT DIVISION.
+   INPUT-OUTPUT SECTION.
+   FILE-CONTROL.
+       SELECT CUSTOMER-FILE ASSIGN TO "CUSTOMER.KSDS"
+           ORGANIZATION IS INDEXED
+           ACCESS MODE IS DYNAMIC
+           RECORD KEY IS CUST-NO
+           FILE STATUS IS WS-FILE-STATUS.
+
+   DATA DIVISION.
+   FILE SECTION.
+   FD  CUSTOMER-FILE.
+   01  CUSTOMER-RECORD.
+       05  CUST-NO              PIC 9(07).
+       05  CUST-NAME            PIC X(15).
+       05  CUST-ADDRESS         PIC X(12).
+       05  CUST-REGION          PIC X(03).
+       05  CUST-CONTACT-NO      PIC X(10).
+       05  CUST-EMAIL           PIC X(40).
+
+   WORKING-STORAGE SECTION.
+   01  WS-USER-INPUT            PIC X(01).
+   01  WS-FLAG-EOF              PIC X VALUE "N".
+   01  WS-CUST-NO               PIC 9(07).
+   01  WS-FOUND-FLAG            PIC X VALUE "N".
+   01  WS-FILE-STATUS           PIC XX.
+
+   PROCEDURE DIVISION.
+   MAIN-PARA.
+       PERFORM OPEN-FILES
+       PERFORM PROCESS-USER-INPUT
+       PERFORM CLOSE-FILES
+       STOP RUN.
+
+   OPEN-FILES.
+       OPEN I-O CUSTOMER-FILE
+       IF WS-FILE-STATUS NOT = "00"
+           DISPLAY "ERROR: UNABLE TO OPEN CUSTOMER FILE. STATUS: " WS-FILE-STATUS
+           STOP RUN
+       END-IF.
+
+   PROCESS-USER-INPUT.
+       PERFORM UNTIL WS-FLAG-EOF = "Y"
+           DISPLAY "SELECT AN OPTION (ENTER=SEARCH, PF3=MENU, PF4=ADD, PF5=UPDATE, PF6=DELETE): " WITH NO ADVANCING
+           ACCEPT WS-USER-INPUT
+           EVALUATE WS-USER-INPUT
+               WHEN "ENTER"
+                   PERFORM SEARCH-RECORD
+               WHEN "3"
+                   PERFORM RETURN-TO-MENU
+               WHEN "4"
+                   PERFORM ADD-RECORD
+               WHEN "5"
+                   PERFORM UPDATE-RECORD
+               WHEN "6"
+                   PERFORM DELETE-RECORD
+               WHEN OTHER
+                   DISPLAY "INVALID OPTION. PLEASE TRY AGAIN."
+           END-EVALUATE
+       END-PERFORM.
+
+   SEARCH-RECORD.
+       DISPLAY "ENTER CUSTOMER NUMBER TO SEARCH: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC." WITH NO ADVANCING
+           EXIT.
+       END-IF
+
+       MOVE WS-CUST-NO TO CUST-NO
+       READ CUSTOMER-FILE
+           INVALID KEY
+               DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+           NOT INVALID KEY
+               DISPLAY "CUSTOMER DETAILS:"
+               DISPLAY "CUST NO: " CUST-NO
+               DISPLAY "NAME: " CUST-NAME
+               DISPLAY "ADDRESS: " CUST-ADDRESS
+               DISPLAY "REGION: " CUST-REGION
+               DISPLAY "CONTACT NO: " CUST-CONTACT-NO
+               DISPLAY "EMAIL: " CUST-EMAIL
+       END-READ.
+
+   RETURN-TO-MENU.
+       DISPLAY "RETURNING TO MENU PROGRAM..."
+       MOVE "Y" TO WS-FLAG-EOF.
+
+   ADD-RECORD.
+       PERFORM VALIDATE-INPUT
+       IF WS-FOUND-FLAG = "N"
+           WRITE CUSTOMER-RECORD
+               INVALID KEY
+                   DISPLAY "ERROR: UNABLE TO ADD RECORD. STATUS: " WS-FILE-STATUS
+               NOT INVALID KEY
+                   DISPLAY "NEW CUSTOMER RECORD ADDED SUCCESSFULLY."
+       ELSE
+           DISPLAY "ERROR: CUSTOMER CODE ALREADY EXISTS."
+       END-IF.
+
+   UPDATE-RECORD.
+       PERFORM VALIDATE-INPUT
+       IF WS-FOUND-FLAG = "Y"
+           REWRITE CUSTOMER-RECORD
+               INVALID KEY
+                   DISPLAY "ERROR: UNABLE TO UPDATE RECORD. STATUS: " WS-FILE-STATUS
+               NOT INVALID KEY
+                   DISPLAY "CUSTOMER RECORD UPDATED SUCCESSFULLY."
+       ELSE
+           DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+       END-IF.
+
+   DELETE-RECORD.
+       DISPLAY "ENTER CUSTOMER NUMBER TO DELETE: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC."
+           EXIT.
+       END-IF
+
+       MOVE WS-CUST-NO TO CUST-NO
+       DELETE CUSTOMER-FILE
+           INVALID KEY
+               DISPLAY "ERROR: CUSTOMER CODE NOT FOUND."
+           NOT INVALID KEY
+               DISPLAY "CUSTOMER RECORD DELETED SUCCESSFULLY."
+
+   VALIDATE-INPUT.
+       DISPLAY "ENTER CUSTOMER NUMBER: " WITH NO ADVANCING
+       ACCEPT WS-CUST-NO
+       IF NOT NUMERIC WS-CUST-NO
+           DISPLAY "ERROR: CUSTOMER CODE MUST BE NUMERIC."
+           EXIT.
+       END-IF
+
+       MOVE WS-CUST-NO TO CUST-NO
+       READ CUSTOMER-FILE
+           INVALID KEY
+               MOVE "N" TO WS-FOUND-FLAG
+           NOT INVALID KEY
+               MOVE "Y" TO WS-FOUND-FLAG
+       END-READ
+
+       IF WS-FOUND-FLAG = "N"
+           DISPLAY "ENTER CUSTOMER NAME: " WITH NO ADVANCING
+           ACCEPT CUST-NAME
+           IF CUST-NAME = SPACES
+               DISPLAY "ERROR: CUSTOMER NAME MUST NOT BE BLANK."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER ADDRESS: " WITH NO ADVANCING
+           ACCEPT CUST-ADDRESS
+           IF CUST-ADDRESS = SPACES
+               DISPLAY "ERROR: CUSTOMER ADDRESS MUST NOT BE BLANK."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER REGION: " WITH NO ADVANCING
+           ACCEPT CUST-REGION
+           IF CUST-REGION NOT = "MUM" AND
+              CUST-REGION NOT = "DEL" AND
+              CUST-REGION NOT = "BNG" AND
+              CUST-REGION NOT = "CHE" AND
+              CUST-REGION NOT = "HYD"
+               DISPLAY "ERROR: INVALID REGION. VALID REGIONS ARE MUM, DEL, BNG, CHE, HYD."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER CONTACT NO: " WITH NO ADVANCING
+           ACCEPT CUST-CONTACT-NO
+           IF NOT NUMERIC CUST-CONTACT-NO OR LENGTH OF CUST-CONTACT-NO NOT = 10
+               DISPLAY "ERROR: CONTACT NUMBER MUST BE NUMERIC AND 10 DIGITS."
+               EXIT.
+           END-IF
+
+           DISPLAY "ENTER CUSTOMER EMAIL: " WITH NO ADVANCING
+           ACCEPT CUST-EMAIL
+           IF FUNCTION NUM-OF-@-SIGNS(CUST-EMAIL) NOT = 1
+               DISPLAY "ERROR: EMAIL MUST CONTAIN EXACTLY ONE '@' SIGN."
+               EXIT.
+           END-IF
+       END-IF.
+
+   CLOSE-FILES.
+       CLOSE CUSTOMER-FILE.
+
+
+
+*****************DEFINE OF KSDS FOR CUSTOMER UPDATE DETAILS*********
+    //DEFINEKS  JOB (ACCT),'DEFINE KSDS',CLASS=A,MSGCLASS=A
+    //STEP1     EXEC PGM=IDCAMS
+    //SYSPRINT  DD  SYSOUT=*
+    //SYSIN     DD  *
+      DEFINE CLUSTER ( -
+        NAME(CUSTOMER.KSDS) -                /* KSDS File Name */
+        INDEXED -                            /* KSDS Type */
+        RECORDSIZE(107 107) -                /* Fixed Record Size */
+        KEYS(7 0) -                          /* Key Length and Offset */
+        RECORDS(100 10) -                    /* Primary and Secondary Space */
+        FREESPACE(10 10) -                   /* Free Space for Inserts */
+        VOLUMES(VOL001) -                    /* Volume Name */
+        DATA(NAME(CUSTOMER.KSDS.DATA)) -     /* Data Component */
+        INDEX(NAME(CUSTOMER.KSDS.INDEX)) )   /* Index Component */
+    /*
+    //       
+
+**********************Adding records to ksds************************   
+0000001John Doe        123 Main St MUM9876543210john.doe@example.com
+0000002Jane Smith      456 Elm St  DEL9123456789jane.smith@example.com
+0000003Alice Brown     789 Oak St  BNG9988776655alice.brown@example.com
+0000004Bob White       321 Pine St CHE9876541230bob.white@example.com
+0000005Charlie Green   654 Maple S HYD9123456780charlie.green@example.com
+
+********************************************************************************
+//LOADKSDS JOB (ACCT),'LOAD KSDS',CLASS=A,MSGCLASS=A
+//STEP1    EXEC PGM=IDCAMS
+//SYSPRINT DD  SYSOUT=*
+//SYSIN    DD  *
+  REPRO INFILE(INPUTFILE) OUTFILE(KSDSFILE)
+/*
+//INPUTFILE DD DSN=YOUR.SEQUENTIAL.FILE,DISP=SHR
+//KSDSFILE  DD DSN=CUSTOMER.KSDS,DISP=SHR
+
+********************************
