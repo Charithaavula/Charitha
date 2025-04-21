@@ -1,0 +1,76 @@
+Test Case 1: Validate Successful Order Insertion
+------------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567 (exists in ITEM-MASTER-FILE with ITEM-STOCK-QTY >= ITEM-QTY)
+- CUSTOMER-CODE: 7654321 (exists in CUSTOMER-MASTER-FILE)
+- ITEM-QTY: 10
+
+Expected Output:
+- "ORDER INSERTED SUCCESSFULLY"
+- ORDER-RECORD written with correct details.
+
+Test Case 2: Validate Invalid Payment Type
+------------------------------------------
+Input:
+- PAYMENT-TYPE: XYZ
+- ITEM-CODE: 1234567
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "INVALID PAYMENT TYPE"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 3: Validate Item Code Not Found
+-----------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 9999999 (does not exist in ITEM-MASTER-FILE)
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "ITEM CODE NOT FOUND"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 4: Validate Customer Code Not Found
+---------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567
+- CUSTOMER-CODE: 9999999 (does not exist in CUSTOMER-MASTER-FILE)
+- ITEM-QTY: 10
+
+Expected Output:
+- "CUSTOMER CODE NOT FOUND"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 5: Validate Item Quantity Exceeds Stock
+-------------------------------------------------
+Input:
+- PAYMENT-TYPE: COD
+- ITEM-CODE: 1234567 (exists in ITEM-MASTER-FILE with ITEM-STOCK-QTY = 5)
+- CUSTOMER-CODE: 7654321
+- ITEM-QTY: 10
+
+Expected Output:
+- "ITEM QTY EXCEEDS STOCK"
+- "PLEASE CORRECT THE INPUT."
+
+Test Case 6: Validate Exit Program
+----------------------------------
+Input:
+- WS-USER-INPUT: 03 (PF3 Key)
+
+Expected Output:
+- "RETURNING TO MENU PROGRAM..."
+- Program exits successfully.
+
+Test Case 7: Validate Invalid PF Key
+------------------------------------
+Input:
+- WS-USER-INPUT: 99 (Invalid PF Key)
+
+Expected Output:
+- "INVALID PF KEY. PLEASE TRY AGAIN."
