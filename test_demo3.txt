@@ -1,0 +1,83 @@
+Test Case 1: Open File Test
+Description: Verify that the CUSTOMER.KSDS file opens successfully.
+Steps:
+1. Run the program.
+2. Check if the file opens without errors.
+Expected Output: "ERROR: UNABLE TO OPEN CUSTOMER FILE. STATUS: " should not be displayed.
+
+Test Case 2: Search Record - Valid Customer Number
+Description: Verify that searching for an existing customer number displays the correct details.
+Steps:
+1. Enter "ENTER" as the option.
+2. Provide a valid customer number.
+Expected Output: Customer details (CUST NO, NAME, ADDRESS, REGION, CONTACT NO, EMAIL) should be displayed.
+
+Test Case 3: Search Record - Invalid Customer Number
+Description: Verify that searching for a non-existing customer number displays an error.
+Steps:
+1. Enter "ENTER" as the option.
+2. Provide an invalid customer number.
+Expected Output: "ERROR: CUSTOMER CODE NOT FOUND." should be displayed.
+
+Test Case 4: Add Record - Valid Input
+Description: Verify that a new customer record is added successfully with valid input.
+Steps:
+1. Enter "4" as the option.
+2. Provide valid customer details (number, name, address, region, contact number, email).
+Expected Output: "NEW CUSTOMER RECORD ADDED SUCCESSFULLY." should be displayed.
+
+Test Case 5: Add Record - Duplicate Customer Number
+Description: Verify that adding a record with an existing customer number displays an error.
+Steps:
+1. Enter "4" as the option.
+2. Provide a duplicate customer number.
+Expected Output: "ERROR: CUSTOMER CODE ALREADY EXISTS." should be displayed.
+
+Test Case 6: Update Record - Valid Input
+Description: Verify that an existing customer record is updated successfully.
+Steps:
+1. Enter "5" as the option.
+2. Provide a valid customer number and updated details.
+Expected Output: "CUSTOMER RECORD UPDATED SUCCESSFULLY." should be displayed.
+
+Test Case 7: Update Record - Invalid Customer Number
+Description: Verify that updating a non-existing customer record displays an error.
+Steps:
+1. Enter "5" as the option.
+2. Provide an invalid customer number.
+Expected Output: "ERROR: CUSTOMER CODE NOT FOUND." should be displayed.
+
+Test Case 8: Delete Record - Valid Customer Number
+Description: Verify that an existing customer record is deleted successfully.
+Steps:
+1. Enter "6" as the option.
+2. Provide a valid customer number.
+Expected Output: "CUSTOMER RECORD DELETED SUCCESSFULLY." should be displayed.
+
+Test Case 9: Delete Record - Invalid Customer Number
+Description: Verify that deleting a non-existing customer record displays an error.
+Steps:
+1. Enter "6" as the option.
+2. Provide an invalid customer number.
+Expected Output: "ERROR: CUSTOMER CODE NOT FOUND." should be displayed.
+
+Test Case 10: Validate Input - Invalid Region
+Description: Verify that entering an invalid region displays an error.
+Steps:
+1. Enter "4" as the option.
+2. Provide an invalid region (not MUM, DEL, BNG, CHE, HYD).
+Expected Output: "ERROR: INVALID REGION. VALID REGIONS ARE MUM, DEL, BNG, CHE, HYD." should be displayed.
+
+Test Case 11: Validate Input - Invalid Contact Number
+Description: Verify that entering an invalid contact number displays an error.
+Steps:
+1. Enter "4" as the option.
+2. Provide a non-numeric or incorrect length contact number.
+Expected Output: "ERROR: CONTACT NUMBER MUST BE NUMERIC AND 10 DIGITS." should be displayed.
+
+Test Case 12: Validate Input - Invalid Email
+Description: Verify that entering an invalid email displays an error.
+Steps:
+1. Enter "4" as the option.
+2. Provide an email without exactly one '@' sign.
+Expected Output: "ERROR: EMAIL MUST CONTAIN EXACTLY ONE '@' SIGN." should be displayed.

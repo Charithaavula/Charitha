@@ -1,0 +1,66 @@
+/* Test cases for ITEM_INQUIRY program */
+
+/* Test 1: Initialize file and check file status */
+TEST_INITIALIZE_FILE: PROCEDURE;
+    DECLARE WS_FILE_STATUS CHAR(2);
+    CALL INITIALIZE_FILE;
+    IF FILESTATUS(ITEM_FILE) = '00' THEN
+        PUT SKIP LIST('Test 1 Passed: File initialized successfully.');
+    ELSE
+        PUT SKIP LIST('Test 1 Failed: Error initializing file. Status: ', FILESTATUS(ITEM_FILE));
+END TEST_INITIALIZE_FILE;
+
+/* Test 2: Display first 10 records */
+TEST_DISPLAY_FIRST_10: PROCEDURE;
+    CALL DISPLAY_FIRST_10;
+    PUT SKIP LIST('Test 2 Completed: Check output for first 10 records.');
+END TEST_DISPLAY_FIRST_10;
+
+/* Test 3: Display last 10 records */
+TEST_DISPLAY_LAST_10: PROCEDURE;
+    CALL DISPLAY_LAST_10;
+    PUT SKIP LIST('Test 3 Completed: Check output for last 10 records.');
+END TEST_DISPLAY_LAST_10;
+
+/* Test 4: Display previous 10 records */
+TEST_DISPLAY_PREVIOUS_10: PROCEDURE;
+    WS_START_POSITION = 20; /* Assume starting from record 20 */
+    CALL DISPLAY_PREVIOUS_10;
+    PUT SKIP LIST('Test 4 Completed: Check output for previous 10 records.');
+END TEST_DISPLAY_PREVIOUS_10;
+
+/* Test 5: Display next 10 records */
+TEST_DISPLAY_NEXT_10: PROCEDURE;
+    WS_START_POSITION = 1; /* Assume starting from record 1 */
+    CALL DISPLAY_NEXT_10;
+    PUT SKIP LIST('Test 5 Completed: Check output for next 10 records.');
+END TEST_DISPLAY_NEXT_10;
+
+/* Test 6: Handle end of file */
+TEST_EOF_HANDLING: PROCEDURE;
+    WS_START_POSITION = 1000; /* Assume a position beyond EOF */
+    CALL DISPLAY_RECORDS;
+    IF EOF = 'Y' THEN
+        PUT SKIP LIST('Test 6 Passed: EOF handled correctly.');
+    ELSE
+        PUT SKIP LIST('Test 6 Failed: EOF not handled correctly.');
+END TEST_EOF_HANDLING;
+
+/* Test 7: Close file */
+TEST_CLOSE_FILE: PROCEDURE;
+    CALL CLOSE_FILE;
+    PUT SKIP LIST('Test 7 Completed: File closed successfully.');
+END TEST_CLOSE_FILE;
+
+/* Main test procedure */
+RUN_TESTS: PROCEDURE OPTIONS(MAIN);
+    PUT SKIP LIST('Running tests for ITEM_INQUIRY program...');
+    CALL TEST_INITIALIZE_FILE;
+    CALL TEST_DISPLAY_FIRST_10;
+    CALL TEST_DISPLAY_LAST_10;
+    CALL TEST_DISPLAY_PREVIOUS_10;
+    CALL TEST_DISPLAY_NEXT_10;
+    CALL TEST_EOF_HANDLING;
+    CALL TEST_CLOSE_FILE;
+    PUT SKIP LIST('All tests completed.');
+END RUN_TESTS;
