@@ -1,0 +1,231 @@
+/*
+ * Program Name: ORDER_MENU
+ * Description: This PL/I program implements a menu-driven Order Management System.
+ *              It allows the user to select and execute one of the following options:
+ *              1. Item Inquiry Program
+ *              2. Customer Details Update Program
+ *              3. Order Update Program
+ *              The program continues to display the menu until the user chooses to exit.
+ *
+ * Procedures:
+ * 1. ORDER_MENU:
+ *    - Main procedure that controls the program flow.
+ *    - Displays the menu and processes user input.
+ *    - Calls appropriate sub-procedures based on the user's choice.
+ *
+ * 2. DISPLAY_MENU:
+ *    - Displays the Order Management System menu to the user.
+ *
+ * 3. ITEM_INQUIRY:
+ *    - Executes the Item Inquiry Program functionality.
+ *
+ * 4. CUSTOMER_DETAILS_UPDATE:
+ *    - Executes the Customer Details Update Program functionality.
+ *
+ * 5. ORDER_UPDATE:
+ *    - Executes the Order Update Program functionality.
+ *
+ * Working Storage Variables:
+ * - WS_USER_CHOICE: Stores the user's menu choice.
+ * - WS_CURSOR_POSITION: Reserved for potential cursor position handling (not used in this program).
+ *
+ * Usage:
+ * - Run the program to display the menu.
+ * - Enter a choice (1, 2, or 3) to execute the corresponding functionality.
+ * - Enter an invalid choice to see an error message.
+ * - Exit the program by selecting option 3.
+ */
+Here is the equivalent PL/I program for the Order Management System Menu:
+
+/* filepath: c:\Users\AVCHARIT\OneDrive - Capgemini\Documents\copilot\Charitha\order_menu.pl1 */
+ORDER_MENU: PROCEDURE OPTIONS(MAIN);
+
+   /* Working storage variables */
+   DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(0);
+   DECLARE WS_CURSOR_POSITION FIXED DECIMAL(4) INIT(0);
+
+   /* Main procedure */
+   PUT SKIP LIST('ORDER MANAGEMENT SYSTEM MENU');
+   DO UNTIL (WS_USER_CHOICE = 3);
+      CALL DISPLAY_MENU;
+      CALL GET WS_USER_CHOICE;
+
+      SELECT (WS_USER_CHOICE);
+         WHEN (1) CALL ITEM_INQUIRY;
+         WHEN (2) CALL CUSTOMER_DETAILS_UPDATE;
+         WHEN (3) CALL ORDER_UPDATE;
+         OTHERWISE PUT SKIP LIST('INVALID CHOICE. PLEASE TRY AGAIN.');
+      END;
+   END;
+
+   PUT SKIP LIST('EXITING PROGRAM...');
+   STOP;
+
+   /* Display menu */
+   DISPLAY_MENU: PROCEDURE;
+      PUT SKIP LIST('---------------------------------------------');
+      PUT SKIP LIST('1. ITEM INQUIRY PROGRAM');
+      PUT SKIP LIST('2. CUSTOMER DETAILS UPDATE PROGRAM');
+      PUT SKIP LIST('3. ORDER UPDATE PROGRAM');
+      PUT SKIP LIST('---------------------------------------------');
+      PUT SKIP LIST('ENTER YOUR CHOICE: ');
+   END DISPLAY_MENU;
+
+   /* Item Inquiry Program */
+   ITEM_INQUIRY: PROCEDURE;
+      PUT SKIP LIST('ITEM INQUIRY PROGRAM EXECUTED.');
+   END ITEM_INQUIRY;
+
+   /* Customer Details Update Program */
+   CUSTOMER_DETAILS_UPDATE: PROCEDURE;
+      PUT SKIP LIST('CUSTOMER DETAILS UPDATE PROGRAM EXECUTED.');
+   END CUSTOMER_DETAILS_UPDATE;
+
+   /* Order Update Program */
+   ORDER_UPDATE: PROCEDURE;
+      PUT SKIP LIST('ORDER UPDATE PROGRAM EXECUTED.');
+   END ORDER_UPDATE;
+
+END ORDER_MENU;
+
+Here is a step-by-step explanation of the PL/I Order Management System Menu program for easy understanding:
+
+1. Program Structure
+The program is a menu-driven system that allows the user to select one of three options:
+
+Item Inquiry Program
+Customer Details Update Program
+Order Update Program
+The program evaluates the user's choice and executes the corresponding procedure. If the user enters an invalid choice, it prompts them to try again.
+
+2. Working Storage Variables
+
+DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(0);
+DECLARE WS_CURSOR_POSITION FIXED DECIMAL(4) INIT(0);
+
+WS_USER_CHOICE: Stores the user's menu selection (e.g., 1, 2, or 3).
+WS_CURSOR_POSITION: Placeholder for cursor position (not used in this implementation but can be extended for cursor-based input).
+
+3. Main Procedure
+
+PUT SKIP LIST('ORDER MANAGEMENT SYSTEM MENU');
+DO UNTIL (WS_USER_CHOICE = 3);
+   CALL DISPLAY_MENU;
+   CALL GET WS_USER_CHOICE;
+
+   SELECT (WS_USER_CHOICE);
+      WHEN (1) CALL ITEM_INQUIRY;
+      WHEN (2) CALL CUSTOMER_DETAILS_UPDATE;
+      WHEN (3) CALL ORDER_UPDATE;
+      OTHERWISE PUT SKIP LIST('INVALID CHOICE. PLEASE TRY AGAIN.');
+   END;
+END;
+
+PUT SKIP LIST('EXITING PROGRAM...');
+STOP;
+
+Program Start:
+
+Displays the title: "ORDER MANAGEMENT SYSTEM MENU".
+Enters a loop that continues until the user selects option 3 (exit).
+Menu Display and Input:
+
+Calls DISPLAY_MENU to show the menu options.
+Waits for the user to input their choice using CALL GET WS_USER_CHOICE.
+Choice Evaluation:
+
+Uses a SELECT statement to evaluate the user's choice:
+1: Calls ITEM_INQUIRY procedure.
+2: Calls CUSTOMER_DETAILS_UPDATE procedure.
+3: Calls ORDER_UPDATE procedure.
+Invalid Input: Displays an error message and prompts the user again.
+Exit:
+
+When the user selects option 3, the program exits the loop, displays "EXITING PROGRAM...", and stops execution.
+
+4. Display Menu
+
+DISPLAY_MENU: PROCEDURE;
+   PUT SKIP LIST('---------------------------------------------');
+   PUT SKIP LIST('1. ITEM INQUIRY PROGRAM');
+   PUT SKIP LIST('2. CUSTOMER DETAILS UPDATE PROGRAM');
+   PUT SKIP LIST('3. ORDER UPDATE PROGRAM');
+   PUT SKIP LIST('---------------------------------------------');
+   PUT SKIP LIST('ENTER YOUR CHOICE: ');
+END DISPLAY_MENU;
+
+This procedure displays the menu options to the user:
+Option 1: Item Inquiry Program
+Option 2: Customer Details Update Program
+Option 3: Order Update Program
+Prompts the user to enter their choice.
+
+5. Item Inquiry Program
+
+ITEM_INQUIRY: PROCEDURE;
+   PUT SKIP LIST('ITEM INQUIRY PROGRAM EXECUTED.');
+END ITEM_INQUIRY;
+
+Displays a message indicating that the Item Inquiry Program has been executed.
+
+6. Customer Details Update Program
+
+CUSTOMER_DETAILS_UPDATE: PROCEDURE;
+   PUT SKIP LIST('CUSTOMER DETAILS UPDATE PROGRAM EXECUTED.');
+END CUSTOMER_DETAILS_UPDATE;
+
+Displays a message indicating that the Customer Details Update Program has been executed.
+
+7. Order Update Program
+
+ORDER_UPDATE: PROCEDURE;
+   PUT SKIP LIST('ORDER UPDATE PROGRAM EXECUTED.');
+END ORDER_UPDATE;
+
+Displays a message indicating that the Order Update Program has been executed.
+
+8. Program Flow
+
+The program starts by displaying the menu.
+The user enters their choice.
+Based on the choice:
+Option 1: Executes the Item Inquiry Program.
+Option 2: Executes the Customer Details Update Program.
+Option 3: Executes the Order Update Program and exits.
+Invalid input: Displays an error message and prompts the user again.
+The program continues until the user selects option 3 to exit.
+
+9. Key Features
+
+Menu-Driven: The program provides a simple menu for user interaction.
+Procedures: Each option is implemented as a separate procedure for modularity.
+Error Handling: Invalid inputs are handled gracefully with a prompt to try again.
+Extensibility: The program can be easily extended to include additional menu options or functionality.
+
+10. Example Execution
+
+Input:
+
+ORDER MANAGEMENT SYSTEM MENU
+---------------------------------------------
+1. ITEM INQUIRY PROGRAM
+2. CUSTOMER DETAILS UPDATE PROGRAM
+3. ORDER UPDATE PROGRAM
+---------------------------------------------
+ENTER YOUR CHOICE: 1
+
+Output:
+ITEM INQUIRY PROGRAM EXECUTED.
+
+Input:
+
+ENTER YOUR CHOICE: 3
+
+Output:
+
+ORDER UPDATE PROGRAM EXECUTED.
+EXITING PROGRAM...
+
+This program is simple, modular, and easy to maintain. Let me know if you need further clarification or enhancements!
+
+*********************************************************************
