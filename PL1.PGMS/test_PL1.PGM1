@@ -1,0 +1,71 @@
+/* Test cases for the PL/I Order Management System Menu program */
+
+/* Test Case 1: Verify Menu Display */
+TEST_MENU_DISPLAY: PROCEDURE;
+    CALL DISPLAY_MENU;
+    /* Expected Output:
+        ---------------------------------------------
+        1. ITEM INQUIRY PROGRAM
+        2. CUSTOMER DETAILS UPDATE PROGRAM
+        3. ORDER UPDATE PROGRAM
+        ---------------------------------------------
+        ENTER YOUR CHOICE:
+    */
+END TEST_MENU_DISPLAY;
+
+/* Test Case 2: Verify Item Inquiry Program Execution */
+TEST_ITEM_INQUIRY: PROCEDURE;
+    DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(1);
+    SELECT (WS_USER_CHOICE);
+        WHEN (1) CALL ITEM_INQUIRY;
+    END;
+    /* Expected Output:
+        ITEM INQUIRY PROGRAM EXECUTED.
+    */
+END TEST_ITEM_INQUIRY;
+
+/* Test Case 3: Verify Customer Details Update Program Execution */
+TEST_CUSTOMER_DETAILS_UPDATE: PROCEDURE;
+    DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(2);
+    SELECT (WS_USER_CHOICE);
+        WHEN (2) CALL CUSTOMER_DETAILS_UPDATE;
+    END;
+    /* Expected Output:
+        CUSTOMER DETAILS UPDATE PROGRAM EXECUTED.
+    */
+END TEST_CUSTOMER_DETAILS_UPDATE;
+
+/* Test Case 4: Verify Order Update Program Execution */
+TEST_ORDER_UPDATE: PROCEDURE;
+    DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(3);
+    SELECT (WS_USER_CHOICE);
+        WHEN (3) CALL ORDER_UPDATE;
+    END;
+    /* Expected Output:
+        ORDER UPDATE PROGRAM EXECUTED.
+    */
+END TEST_ORDER_UPDATE;
+
+/* Test Case 5: Verify Invalid Choice Handling */
+TEST_INVALID_CHOICE: PROCEDURE;
+    DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(4);
+    SELECT (WS_USER_CHOICE);
+        OTHERWISE PUT SKIP LIST('INVALID CHOICE. PLEASE TRY AGAIN.');
+    END;
+    /* Expected Output:
+        INVALID CHOICE. PLEASE TRY AGAIN.
+    */
+END TEST_INVALID_CHOICE;
+
+/* Test Case 6: Verify Program Exit */
+TEST_PROGRAM_EXIT: PROCEDURE;
+    DECLARE WS_USER_CHOICE FIXED DECIMAL(1) INIT(3);
+    DO UNTIL (WS_USER_CHOICE = 3);
+        CALL DISPLAY_MENU;
+        CALL GET WS_USER_CHOICE;
+    END;
+    PUT SKIP LIST('EXITING PROGRAM...');
+    /* Expected Output:
+        EXITING PROGRAM...
+    */
+END TEST_PROGRAM_EXIT;
