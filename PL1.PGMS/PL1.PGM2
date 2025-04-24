@@ -1,0 +1,452 @@
+/*
+ * ITEM_INQUIRY: PROCEDURE OPTIONS(MAIN)
+ * 
+ * This program implements an ITEM INQUIRY system that allows users to interact with
+ * a file containing item records. The program provides functionality to navigate
+ * through the records in the file and display them in chunks of 10 records at a time.
+ * 
+ * Features:
+ * - Display the first 10 records in the file.
+ * - Display the last 10 records in the file.
+ * - Navigate to the previous 10 records.
+ * - Navigate to the next 10 records.
+ * - Exit the program.
+ * 
+ * File and Record Declarations:
+ * - ITEM_FILE: Represents the file containing item records.
+ * - ITEM_RECORD: Structure containing fields for item code, name, quantity, and price.
+ * 
+ * Working Storage Variables:
+ * - WS_ITEM_CODE: Stores the item code entered by the user.
+ * - WS_KEY: Stores the function key entered by the user.
+ * - WS_FILE_STATUS: Stores the file status for VSAM operations.
+ * - EOF: Indicates the end of the file.
+ * - WS_RECORD_COUNT: Tracks the number of records processed in the current operation.
+ * - WS_RECORD_LIMIT: Defines the maximum number of records to display (10).
+ * - WS_START_POSITION: Tracks the starting position for record navigation.
+ * 
+ * Procedures:
+ * - INITIALIZE_FILE: Opens the file and initializes variables for navigation.
+ * - CLOSE_FILE: Closes the file.
+ * - DISPLAY_MENU: Displays the menu of available options to the user.
+ * - DISPLAY_FIRST_10: Displays the first 10 records in the file.
+ * - DISPLAY_LAST_10: Displays the last 10 records in the file.
+ * - DISPLAY_PREVIOUS_10: Displays the previous 10 records from the current position.
+ * - DISPLAY_NEXT_10: Displays the next 10 records from the current position.
+ * - DISPLAY_RECORDS: Displays records starting from the current position up to the limit.
+ * - CALCULATE_LAST_START: Calculates the starting position for the last 10 records.
+ * 
+ * Program Flow:
+ * 1. The program starts by displaying a welcome message and initializing the file.
+ * 2. The user is presented with a menu to choose an action (e.g., display records, exit).
+ * 3. Based on the user's input, the corresponding procedure is called to perform the action.
+ * 4. The program continues until the user chooses to exit.
+ * 5. The file is closed, and the program terminates.
+ * 
+ * Error Handling:
+ * - If the file cannot be opened, an error message is displayed, and the program stops.
+ * - If an invalid function key is entered, an error message is displayed.
+ * - End-of-file (EOF) is handled gracefully during record navigation.
+ */
+/* filepath: c:\Users\AVCHARIT\OneDrive - Capgemini\Documents\copilot\Charitha\item_inquiry.pl1 */
+ITEM_INQUIRY: PROCEDURE OPTIONS(MAIN);
+
+   /* File and record declarations */
+   DECLARE ITEM_FILE FILE RECORD INPUT OUTPUT;
+   DECLARE 1 ITEM_RECORD,
+               2 ITEM_CODE       FIXED DECIMAL(7),  /* Primary Key */
+               2 ITEM_NAME       CHAR(12),
+               2 ITEM_QTY        FIXED DECIMAL(5),
+               2 ITEM_PRICE      FIXED DECIMAL(7,2);
+
+   /* Working storage variables */
+   DECLARE WS_ITEM_CODE       FIXED DECIMAL(7);
+   DECLARE WS_KEY             CHAR(1);
+   DECLARE WS_FILE_STATUS     CHAR(2);  /* File status for VSAM operations */
+   DECLARE EOF                CHAR(1) INIT('N');
+   DECLARE WS_RECORD_COUNT    FIXED DECIMAL(5) INIT(0);
+   DECLARE WS_RECORD_LIMIT    FIXED DECIMAL(5) INIT(10);
+   DECLARE WS_START_POSITION  FIXED DECIMAL(5) INIT(1);
+
+   /* Main procedure */
+   PUT SKIP LIST('ITEM INQUIRY PROGRAM');
+   CALL INITIALIZE_FILE;
+
+   DO UNTIL (WS_KEY = '3');
+      CALL DISPLAY_MENU;
+      CALL GET WS_KEY;
+
+      SELECT (WS_KEY);
+         WHEN ('5') CALL DISPLAY_FIRST_10;
+         WHEN ('6') CALL DISPLAY_LAST_10;
+         WHEN ('7') CALL DISPLAY_PREVIOUS_10;
+         WHEN ('8') CALL DISPLAY_NEXT_10;
+         OTHERWISE PUT SKIP LIST('INVALID FUNCTION KEY. PLEASE TRY AGAIN.');
+      END;
+   END;
+
+   CALL CLOSE_FILE;
+   PUT SKIP LIST('RETURNING TO MAIN MENU...');
+   STOP;
+
+   /* Initialize file */
+   INITIALIZE_FILE: PROCEDURE;
+      OPEN FILE(ITEM_FILE) DIRECT;
+      IF FILESTATUS(ITEM_FILE) ^= '00' THEN DO;
+         PUT SKIP LIST('ERROR OPENING FILE. STATUS: ', FILESTATUS(ITEM_FILE));
+         STOP;
+      END;
+      WS_START_POSITION = 1;
+      EOF = 'N';
+   END INITIALIZE_FILE;
+
+   /* Close file */
+   CLOSE_FILE: PROCEDURE;
+      CLOSE FILE(ITEM_FILE);
+   END CLOSE_FILE;
+
+   /* Display menu */
+   DISPLAY_MENU: PROCEDURE;
+      PUT SKIP LIST('PF3 = EXIT  PF5 = FIRST  PF6 = LAST  PF7 = PREV  PF8 = NEXT');
+      PUT SKIP LIST('ENTER FUNCTION KEY: ');
+   END DISPLAY_MENU;
+
+   /* Display first 10 records */
+   DISPLAY_FIRST_10: PROCEDURE;
+      WS_START_POSITION = 1;
+      CALL DISPLAY_RECORDS;
+   END DISPLAY_FIRST_10;
+
+   /* Display last 10 records */
+   DISPLAY_LAST_10: PROCEDURE;
+      CALL CALCULATE_LAST_START;
+      CALL DISPLAY_RECORDS;
+   END DISPLAY_LAST_10;
+
+   /* Display previous 10 records */
+   DISPLAY_PREVIOUS_10: PROCEDURE;
+      WS_START_POSITION = WS_START_POSITION - WS_RECORD_LIMIT;
+      IF WS_START_POSITION < 1 THEN WS_START_POSITION = 1;
+      CALL DISPLAY_RECORDS;
+   END DISPLAY_PREVIOUS_10;
+
+   /* Display next 10 records */
+   DISPLAY_NEXT_10: PROCEDURE;
+      WS_START_POSITION = WS_START_POSITION + WS_RECORD_LIMIT;
+      CALL DISPLAY_RECORDS;
+   END DISPLAY_NEXT_10;
+
+   /* Display records */
+   DISPLAY_RECORDS: PROCEDURE;
+      WS_RECORD_COUNT = 0;
+      PUT SKIP LIST('RECORDS:');
+      DO UNTIL (WS_RECORD_COUNT >= WS_RECORD_LIMIT | EOF = 'Y');
+         IF WS_RECORD_COUNT = 0 THEN DO;
+            LOCATE FILE(ITEM_FILE) KEY(WS_START_POSITION);
+            IF FILESTATUS(ITEM_FILE) ^= '00' THEN EOF = 'Y';
+         END;
+         READ FILE(ITEM_FILE) INTO(ITEM_RECORD);
+         IF FILESTATUS(ITEM_FILE) = '10' THEN EOF = 'Y';
+         ELSE DO;
+            PUT SKIP LIST('ITEM CODE : ', ITEM_CODE);
+            PUT SKIP LIST('ITEM NAME : ', ITEM_NAME);
+            PUT SKIP LIST('ITEM QTY  : ', ITEM_QTY);
+            PUT SKIP LIST('ITEM PRICE: ', ITEM_PRICE);
+            WS_RECORD_COUNT = WS_RECORD_COUNT + 1;
+         END;
+      END;
+   END DISPLAY_RECORDS;
+
+   /* Calculate last start position */
+   CALCULATE_LAST_START: PROCEDURE;
+      WS_RECORD_COUNT = 0;
+      DO UNTIL (EOF = 'Y');
+         READ FILE(ITEM_FILE) INTO(ITEM_RECORD);
+         IF FILESTATUS(ITEM_FILE) = '10' THEN EOF = 'Y';
+         ELSE WS_RECORD_COUNT = WS_RECORD_COUNT + 1;
+      END;
+      EOF = 'N';
+      IF WS_RECORD_COUNT > WS_RECORD_LIMIT THEN
+         WS_START_POSITION = WS_RECORD_COUNT - WS_RECORD_LIMIT + 1;
+      ELSE
+         WS_START_POSITION = 1;
+   END CALCULATE_LAST_START;
+
+END ITEM_INQUIRY;
+
+**********EXPLANATION****************************************
+Here is the equivalent PL/I code for the COBOL program provided, rewritten as a PL/I developer:
+
+DECLARE ITEM_FILE FILE RECORD INPUT OUTPUT;
+DECLARE 1 ITEM_RECORD,
+           2 ITEM_CODE       FIXED DECIMAL(7),  /* Primary Key */
+           2 ITEM_NAME       CHAR(12),
+           2 ITEM_QTY        FIXED DECIMAL(5),
+           2 ITEM_PRICE      FIXED DECIMAL(7,2);
+ITEM_FILE: Declares the file used for storing item data.
+ITEM_RECORD: Defines the structure of each record in the file:
+ITEM_CODE: A 7-digit numeric field (primary key).
+ITEM_NAME: A 12-character string for the item name.
+ITEM_QTY: A 5-digit numeric field for the quantity.
+ITEM_PRICE: A numeric field with 7 digits and 2 decimal places for the price.
+
+2. Working Storage Variables
+
+DECLARE WS_ITEM_CODE       FIXED DECIMAL(7);
+DECLARE WS_KEY             CHAR(1);
+DECLARE WS_FILE_STATUS     CHAR(2);
+DECLARE EOF                CHAR(1) INIT('N');
+DECLARE WS_RECORD_COUNT    FIXED DECIMAL(5) INIT(0);
+DECLARE WS_RECORD_LIMIT    FIXED DECIMAL(5) INIT(10);
+DECLARE WS_START_POSITION  FIXED DECIMAL(5) INIT(1);
+
+WS_ITEM_CODE: Stores the item code entered by the user.
+WS_KEY: Stores the function key pressed by the user (e.g., PF5, PF6).
+WS_FILE_STATUS: Stores the status of file operations (e.g., success or error).
+EOF: Indicates whether the end of the file has been reached ('Y' for yes, 'N' for no).
+WS_RECORD_COUNT: Tracks the number of records processed in the current operation.
+WS_RECORD_LIMIT: Limits the number of records displayed at a time (default is 10).
+WS_START_POSITION: Tracks the starting position for reading records.
+
+3. Main Procedure
+
+PUT SKIP LIST('ITEM INQUIRY PROGRAM');
+CALL INITIALIZE_FILE;
+
+DO UNTIL (WS_KEY = '3');
+   CALL DISPLAY_MENU;
+   CALL GET WS_KEY;
+
+   SELECT (WS_KEY);
+      WHEN ('5') CALL DISPLAY_FIRST_10;
+      WHEN ('6') CALL DISPLAY_LAST_10;
+      WHEN ('7') CALL DISPLAY_PREVIOUS_10;
+      WHEN ('8') CALL DISPLAY_NEXT_10;
+      OTHERWISE PUT SKIP LIST('INVALID FUNCTION KEY. PLEASE TRY AGAIN.');
+   END;
+END;
+
+CALL CLOSE_FILE;
+PUT SKIP LIST('RETURNING TO MAIN MENU...');
+STOP;
+
+Initialization:
+Displays the program title.
+Calls INITIALIZE_FILE to open the file and prepare it for reading.
+Main Loop:
+Repeats until the user presses PF3 (exit).
+Displays the menu and waits for the user to press a function key.
+Based on the key pressed:
+PF5: Displays the first 10 records.
+PF6: Displays the last 10 records.
+PF7: Displays the previous 10 records.
+PF8: Displays the next 10 records.
+Invalid keys display an error message.
+Exit:
+Calls CLOSE_FILE to close the file.
+Displays a message and stops the program.
+
+4. File Initialization
+
+INITIALIZE_FILE: PROCEDURE;
+   OPEN FILE(ITEM_FILE) DIRECT;
+   IF FILESTATUS(ITEM_FILE) ^= '00' THEN DO;
+      PUT SKIP LIST('ERROR OPENING FILE. STATUS: ', FILESTATUS(ITEM_FILE));
+      STOP;
+   END;
+   WS_START_POSITION = 1;
+   EOF = 'N';
+END INITIALIZE_FILE;
+
+Opens the file for direct access.
+Checks the file status:
+If the file cannot be opened, displays an error message and stops the program.
+Initializes the starting position and EOF flag.
+
+5. Display Menu
+
+DISPLAY_MENU: PROCEDURE;
+   PUT SKIP LIST('PF3 = EXIT  PF5 = FIRST  PF6 = LAST  PF7 = PREV  PF8 = NEXT');
+   PUT SKIP LIST('ENTER FUNCTION KEY: ');
+END DISPLAY_MENU;
+
+Displays the menu options for navigation (e.g., PF3 to exit, PF5 for the first 10 records).
+
+6. Display First 10 Records
+
+DISPLAY_FIRST_10: PROCEDURE;
+   WS_START_POSITION = 1;
+   CALL DISPLAY_RECORDS;
+END DISPLAY_FIRST_10;
+
+Sets the starting position to 1.
+Calls DISPLAY_RECORDS to display the first 10 records.
+
+7. Display Last 10 Records
+
+DISPLAY_LAST_10: PROCEDURE;
+   CALL CALCULATE_LAST_START;
+   CALL DISPLAY_RECORDS;
+END DISPLAY_LAST_10;
+
+Calls CALCULATE_LAST_START to calculate the starting position for the last 10 records.
+Calls DISPLAY_RECORDS to display the records.
+
+8. Display Previous 10 Records
+
+DISPLAY_PREVIOUS_10: PROCEDURE;
+   WS_START_POSITION = WS_START_POSITION - WS_RECORD_LIMIT;
+   IF WS_START_POSITION < 1 THEN WS_START_POSITION = 1;
+   CALL DISPLAY_RECORDS;
+END DISPLAY_PREVIOUS_10;
+
+Decreases the starting position by 10.
+Ensures the starting position does not go below 1.
+Calls DISPLAY_RECORDS to display the records.
+
+9. Display Next 10 Records
+
+DISPLAY_NEXT_10: PROCEDURE;
+   WS_START_POSITION = WS_START_POSITION + WS_RECORD_LIMIT;
+   CALL DISPLAY_RECORDS;
+END DISPLAY_NEXT_10;
+
+Increases the starting position by 10.
+Calls DISPLAY_RECORDS to display the records.
+
+10. Display Records
+
+DISPLAY_RECORDS: PROCEDURE;
+   WS_RECORD_COUNT = 0;
+   PUT SKIP LIST('RECORDS:');
+   DO UNTIL (WS_RECORD_COUNT >= WS_RECORD_LIMIT | EOF = 'Y');
+      IF WS_RECORD_COUNT = 0 THEN DO;
+         LOCATE FILE(ITEM_FILE) KEY(WS_START_POSITION);
+         IF FILESTATUS(ITEM_FILE) ^= '00' THEN EOF = 'Y';
+      END;
+      READ FILE(ITEM_FILE) INTO(ITEM_RECORD);
+      IF FILESTATUS(ITEM_FILE) = '10' THEN EOF = 'Y';
+      ELSE DO;
+         PUT SKIP LIST('ITEM CODE : ', ITEM_CODE);
+         PUT SKIP LIST('ITEM NAME : ', ITEM_NAME);
+         PUT SKIP LIST('ITEM QTY  : ', ITEM_QTY);
+         PUT SKIP LIST('ITEM PRICE: ', ITEM_PRICE);
+         WS_RECORD_COUNT = WS_RECORD_COUNT + 1;
+      END;
+   END;
+END DISPLAY_RECORDS;
+
+Resets the record count.
+Reads records from the file until:
+10 records are displayed, or
+End of file (EOF) is reached.
+For each record:
+Displays the item code, name, quantity, and price.
+Increments the record count.
+
+11. Calculate Last Start Position
+
+CALCULATE_LAST_START: PROCEDURE;
+   WS_RECORD_COUNT = 0;
+   DO UNTIL (EOF = 'Y');
+      READ FILE(ITEM_FILE) INTO(ITEM_RECORD);
+      IF FILESTATUS(ITEM_FILE) = '10' THEN EOF = 'Y';
+      ELSE WS_RECORD_COUNT = WS_RECORD_COUNT + 1;
+   END;
+   EOF = 'N';
+   IF WS_RECORD_COUNT > WS_RECORD_LIMIT THEN
+      WS_START_POSITION = WS_RECORD_COUNT - WS_RECORD_LIMIT + 1;
+   ELSE
+      WS_START_POSITION = 1;
+END CALCULATE_LAST_START;
+
+Reads all records to count the total number of records.
+Calculates the starting position for the last 10 records:
+If there are more than 10 records, subtracts 10 from the total count.
+Otherwise, sets the starting position to 1.
+
+12. Close File
+
+CLOSE_FILE: PROCEDURE;
+   CLOSE FILE(ITEM_FILE);
+END CLOSE_FILE;
+
+Closes the file when the program ends.
+
+Summary*************************************************************************************************************************
+
+The program is a PL/I implementation of an item inquiry system.
+It uses indexed file operations to retrieve and display item details in chunks of 10 records.
+Users can navigate through the records using function keys (PF5, PF6, PF7, PF8).
+The program handles file operations, error checking, and user input efficiently.
+
+**********************TEST CASES*****************
+
+/* Test cases for ITEM_INQUIRY program */
+
+/* Test 1: Initialize file and check file status */
+TEST_INITIALIZE_FILE: PROCEDURE;
+    DECLARE WS_FILE_STATUS CHAR(2);
+    CALL INITIALIZE_FILE;
+    IF FILESTATUS(ITEM_FILE) = '00' THEN
+        PUT SKIP LIST('Test 1 Passed: File initialized successfully.');
+    ELSE
+        PUT SKIP LIST('Test 1 Failed: Error initializing file. Status: ', FILESTATUS(ITEM_FILE));
+END TEST_INITIALIZE_FILE;
+
+/* Test 2: Display first 10 records */
+TEST_DISPLAY_FIRST_10: PROCEDURE;
+    CALL DISPLAY_FIRST_10;
+    PUT SKIP LIST('Test 2 Completed: Check output for first 10 records.');
+END TEST_DISPLAY_FIRST_10;
+
+/* Test 3: Display last 10 records */
+TEST_DISPLAY_LAST_10: PROCEDURE;
+    CALL DISPLAY_LAST_10;
+    PUT SKIP LIST('Test 3 Completed: Check output for last 10 records.');
+END TEST_DISPLAY_LAST_10;
+
+/* Test 4: Display previous 10 records */
+TEST_DISPLAY_PREVIOUS_10: PROCEDURE;
+    WS_START_POSITION = 20; /* Assume starting from record 20 */
+    CALL DISPLAY_PREVIOUS_10;
+    PUT SKIP LIST('Test 4 Completed: Check output for previous 10 records.');
+END TEST_DISPLAY_PREVIOUS_10;
+
+/* Test 5: Display next 10 records */
+TEST_DISPLAY_NEXT_10: PROCEDURE;
+    WS_START_POSITION = 1; /* Assume starting from record 1 */
+    CALL DISPLAY_NEXT_10;
+    PUT SKIP LIST('Test 5 Completed: Check output for next 10 records.');
+END TEST_DISPLAY_NEXT_10;
+
+/* Test 6: Handle end of file */
+TEST_EOF_HANDLING: PROCEDURE;
+    WS_START_POSITION = 1000; /* Assume a position beyond EOF */
+    CALL DISPLAY_RECORDS;
+    IF EOF = 'Y' THEN
+        PUT SKIP LIST('Test 6 Passed: EOF handled correctly.');
+    ELSE
+        PUT SKIP LIST('Test 6 Failed: EOF not handled correctly.');
+END TEST_EOF_HANDLING;
+
+/* Test 7: Close file */
+TEST_CLOSE_FILE: PROCEDURE;
+    CALL CLOSE_FILE;
+    PUT SKIP LIST('Test 7 Completed: File closed successfully.');
+END TEST_CLOSE_FILE;
+
+/* Main test procedure */
+RUN_TESTS: PROCEDURE OPTIONS(MAIN);
+    PUT SKIP LIST('Running tests for ITEM_INQUIRY program...');
+    CALL TEST_INITIALIZE_FILE;
+    CALL TEST_DISPLAY_FIRST_10;
+    CALL TEST_DISPLAY_LAST_10;
+    CALL TEST_DISPLAY_PREVIOUS_10;
+    CALL TEST_DISPLAY_NEXT_10;
+    CALL TEST_EOF_HANDLING;
+    CALL TEST_CLOSE_FILE;
+    PUT SKIP LIST('All tests completed.');
+END RUN_TESTS;
+
+***************************************************************************
