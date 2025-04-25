@@ -1,0 +1,444 @@
+Here is the PL/I implementation of the ORDER UPDATE PROGRAM
+
+/*
+ * PROGRAM: ORDER_UPDATE
+ * DESCRIPTION:
+ * This program is designed to handle order updates in a transactional system. 
+ * It allows users to input order details, validates the input, and inserts the 
+ * order into the system if all validations pass. The program also provides 
+ * error messages for invalid inputs and maintains a sequential order number 
+ * for each new order.
+
+ * c:\Users\AVCHARIT\OneDrive - Capgemini\Documents\copilot\Charitha\PL1.PGMS\PL1.PGM4
+
+ * PROCEDURES:
+ * 1. DISPLAY_MENU:
+ *    Displays the main menu with input fields and instructions for the user.
+
+ * 2. ACCEPT_INPUT:
+ *    Accepts user input for payment type, item code, customer code, and item quantity.
+
+ * 3. VALIDATE_INPUT:
+ *    Validates the user input:
+ *      - Checks if the payment type is valid (COD/NET).
+ *      - Verifies if the item code exists in the ITEM_MASTER_FILE.
+ *      - Ensures the item quantity does not exceed available stock.
+ *      - Confirms the customer code exists in the CUSTOMER_MASTER_FILE.
+ *    Sets a validation flag and error message if any validation fails.
+
+ * 4. INSERT_ORDER:
+ *    Inserts a new order into the ORDER_FILE with a unique order code, 
+ *    current date, and user-provided details. Displays success or error 
+ *    messages based on the operation's outcome.
+
+ * 5. DISPLAY_ERROR:
+ *    Displays the error message generated during input validation and prompts 
+ *    the user to correct the input.
+
+ * VARIABLES:
+ * - ORDER_RECORD: Structure to hold order details.
+ * - ITEM_MASTER_RECORD: Structure to hold item master details.
+ * - CUSTOMER_MASTER_RECORD: Structure to hold customer master details.
+ * - WS_USER_INPUT: Stores user input for menu navigation.
+ * - WS_VALID_FLAG: Indicates whether the input is valid ('Y' or 'N').
+ * - WS_ERROR_MESSAGE: Stores error messages for invalid inputs.
+ * - WS_ORDER_NUMBER: Maintains the next order number to be assigned.
+
+ * FILES:
+ * - ORDER_FILE: Output file to store order records.
+ * - ITEM_MASTER_FILE: Input file to validate item codes and stock quantities.
+ * - CUSTOMER_MASTER_FILE: Input file to validate customer codes.
+
+ * USER INSTRUCTIONS:
+ * - Enter payment type (COD/NET), item code, customer code, and item quantity.
+ * - Press ENTER to process the order or PF3 to exit the program.
+ * - Correct any errors displayed and re-enter the input.
+
+ * NOTES:
+ * - The program uses fixed decimal and character data types for record fields.
+ * - Sequential order numbers start from 1000001 and increment by 1 for each new order.
+ * - The program terminates when the user presses PF3.
+ */
+
+
+/* filepath: c:\Users\AVCHARIT\OneDrive - Capgemini\Documents\copilot\Charitha\PL1.PGMS\PL1.PGM4 */
+ORDER_UPDATE: PROCEDURE OPTIONS(MAIN);
+
+   /* File and record declarations */
+   DECLARE ORDER_FILE FILE RECORD OUTPUT;
+   DECLARE ITEM_MASTER_FILE FILE RECORD INPUT;
+   DECLARE CUSTOMER_MASTER_FILE FILE RECORD INPUT;
+
+   DECLARE 1 ORDER_RECORD,
+               2 ORDER_CODE       FIXED DECIMAL(7),  /* Primary Key */
+               2 CUSTOMER_CODE    FIXED DECIMAL(7),
+               2 ITEM_CODE        FIXED DECIMAL(7),
+               2 ITEM_QTY         FIXED DECIMAL(5),
+               2 ORDER_DATE       CHAR(8),
+               2 PAYMENT_TYPE     CHAR(3);
+
+   DECLARE 1 ITEM_MASTER_RECORD,
+               2 ITEM_CODE        FIXED DECIMAL(7),
+               2 ITEM_STOCK_QTY   FIXED DECIMAL(5);
+
+   DECLARE 1 CUSTOMER_MASTER_RECORD,
+               2 CUSTOMER_CODE    FIXED DECIMAL(7);
+
+   /* Working storage variables */
+   DECLARE WS_USER_INPUT       CHAR(2);
+   DECLARE WS_VALID_FLAG       CHAR(1) INIT('N');
+   DECLARE WS_ERROR_MESSAGE    CHAR(50);
+   DECLARE WS_ORDER_NUMBER     FIXED DECIMAL(7) INIT(1000001);
+
+   /* Main procedure */
+   PUT SKIP LIST('ORDER UPDATE PROGRAM STARTED');
+   CALL DISPLAY_MENU;
+
+   DO UNTIL (WS_USER_INPUT = '03');  /* PF3 Key */
+      CALL ACCEPT_INPUT;
+
+      SELECT (WS_USER_INPUT);
+         WHEN ('03') DO;
+            PUT SKIP LIST('RETURNING TO MENU PROGRAM...');
+            STOP;
+         END;
+         WHEN ('ENTER') DO;
+            CALL VALIDATE_INPUT;
+            IF WS_VALID_FLAG = 'Y' THEN
+               CALL INSERT_ORDER;
+            ELSE
+               CALL DISPLAY_ERROR;
+         END;
+         OTHERWISE PUT SKIP LIST('INVALID PF KEY. PLEASE TRY AGAIN.');
+      END;
+   END;
+
+   STOP;
+
+   /* Display menu */
+   DISPLAY_MENU: PROCEDURE;
+      PUT SKIP LIST('---------------------------------------------');
+      PUT SKIP LIST('ORDER UPDATE PROGRAM');
+      PUT SKIP LIST('PAYMENT TYPE : ');
+      PUT SKIP LIST('ITEM CODE    : ');
+      PUT SKIP LIST('CUSTOMER CODE: ');
+      PUT SKIP LIST('ITEM QTY     : ');
+      PUT SKIP LIST('ENTER = TO PROCESS   PF3 = TO EXIT');
+      PUT SKIP LIST('---------------------------------------------');
+   END DISPLAY_MENU;
+
+   /* Accept input */
+   ACCEPT_INPUT: PROCEDURE;
+      PUT SKIP LIST('ENTER PAYMENT TYPE (COD/NET): ');
+      CALL GET PAYMENT_TYPE;
+
+      PUT SKIP LIST('ENTER ITEM CODE: ');
+      CALL GET ITEM_CODE;
+
+      PUT SKIP LIST('ENTER CUSTOMER CODE: ');
+      CALL GET CUSTOMER_CODE;
+
+      PUT SKIP LIST('ENTER ITEM QUANTITY: ');
+      CALL GET ITEM_QTY;
+
+      PUT SKIP LIST('PRESS ENTER TO PROCESS OR PF3 TO EXIT');
+      CALL GET WS_USER_INPUT;
+   END ACCEPT_INPUT;
+
+   /* Validate input */
+   VALIDATE_INPUT: PROCEDURE;
+      WS_VALID_FLAG = 'N';
+      WS_ERROR_MESSAGE = '';
+
+      /* Validate Payment Type */
+      IF PAYMENT_TYPE NOT IN ('COD', 'NET') THEN DO;
+         WS_ERROR_MESSAGE = 'INVALID PAYMENT TYPE';
+         RETURN;
+      END;
+
+      /* Validate Item Code */
+      LOCATE FILE(ITEM_MASTER_FILE) KEY(ITEM_CODE);
+      READ FILE(ITEM_MASTER_FILE) INTO(ITEM_MASTER_RECORD);
+      IF FILESTATUS(ITEM_MASTER_FILE) ^= '00' THEN DO;
+         WS_ERROR_MESSAGE = 'ITEM CODE NOT FOUND';
+         RETURN;
+      END;
+
+      /* Validate Item Quantity */
+      IF ITEM_QTY > ITEM_STOCK_QTY THEN DO;
+         WS_ERROR_MESSAGE = 'ITEM QTY EXCEEDS STOCK';
+         RETURN;
+      END;
+
+      /* Validate Customer Code */
+      LOCATE FILE(CUSTOMER_MASTER_FILE) KEY(CUSTOMER_CODE);
+      READ FILE(CUSTOMER_MASTER_FILE) INTO(CUSTOMER_MASTER_RECORD);
+      IF FILESTATUS(CUSTOMER_MASTER_FILE) ^= '00' THEN DO;
+         WS_ERROR_MESSAGE = 'CUSTOMER CODE NOT FOUND';
+         RETURN;
+      END;
+
+      WS_VALID_FLAG = 'Y';
+   END VALIDATE_INPUT;
+
+   /* Insert order */
+   INSERT_ORDER: PROCEDURE;
+      ORDER_CODE = WS_ORDER_NUMBER;
+      WS_ORDER_NUMBER = WS_ORDER_NUMBER + 1;
+      ORDER_DATE = FUNCTION DATE();
+      WRITE FILE(ORDER_FILE) FROM(ORDER_RECORD);
+
+      IF FILESTATUS(ORDER_FILE) = '00' THEN
+         PUT SKIP LIST('ORDER INSERTED SUCCESSFULLY');
+      ELSE
+         PUT SKIP LIST('ERROR INSERTING ORDER');
+   END INSERT_ORDER;
+
+   /* Display error */
+   DISPLAY_ERROR: PROCEDURE;
+      PUT SKIP LIST(WS_ERROR_MESSAGE);
+      PUT SKIP LIST('PLEASE CORRECT THE INPUT.');
+   END DISPLAY_ERROR;
+
+END ORDER_UPDATE;
+
+******************************EXPLANATION*****************************
+
+GitHub Copilot
+
+Here is a step-by-step explanation of the PL/I ORDER UPDATE PROGRAM for easy understanding:
+
+1. Program Overview
+
+This program is invoked from a menu program and allows the user to:
+
+Insert a new order record into the ORDER_FILE.
+Validate user inputs for payment type, item code, customer code, and item quantity.
+Automatically generate an order number and set the order date to the current system date.
+Handle invalid inputs by displaying appropriate error messages.
+Exit the program and return to the menu when the user presses PF3.
+
+2. File and Record Declarations
+
+DECLARE ORDER_FILE FILE RECORD OUTPUT;
+DECLARE ITEM_MASTER_FILE FILE RECORD INPUT;
+DECLARE CUSTOMER_MASTER_FILE FILE RECORD INPUT;
+
+DECLARE 1 ORDER_RECORD,
+           2 ORDER_CODE       FIXED DECIMAL(7),  /* Primary Key */
+           2 CUSTOMER_CODE    FIXED DECIMAL(7),
+           2 ITEM_CODE        FIXED DECIMAL(7),
+           2 ITEM_QTY         FIXED DECIMAL(5),
+           2 ORDER_DATE       CHAR(8),
+           2 PAYMENT_TYPE     CHAR(3);
+
+DECLARE 1 ITEM_MASTER_RECORD,
+           2 ITEM_CODE        FIXED DECIMAL(7),
+           2 ITEM_STOCK_QTY   FIXED DECIMAL(5);
+
+DECLARE 1 CUSTOMER_MASTER_RECORD,
+           2 CUSTOMER_CODE    FIXED DECIMAL(7);
+
+
+ORDER_FILE: Stores order records.
+ITEM_MASTER_FILE: Stores item details, including stock quantity.
+CUSTOMER_MASTER_FILE: Stores customer details.
+ORDER_RECORD: Represents an order with fields like order code, customer code, item code, quantity, order date, and payment type.
+ITEM_MASTER_RECORD: Represents an item with fields like item code and stock quantity.
+CUSTOMER_MASTER_RECORD: Represents a customer with a customer code.
+
+3. Working Storage Variables
+
+DECLARE WS_USER_INPUT       CHAR(2);
+DECLARE WS_VALID_FLAG       CHAR(1) INIT('N');
+DECLARE WS_ERROR_MESSAGE    CHAR(50);
+DECLARE WS_ORDER_NUMBER     FIXED DECIMAL(7) INIT(1000001);
+
+WS_USER_INPUT: Captures the user's input (e.g., ENTER or PF3).
+WS_VALID_FLAG: Indicates whether the input validation passed ('Y' for valid, 'N' for invalid).
+WS_ERROR_MESSAGE: Stores error messages for invalid inputs.
+WS_ORDER_NUMBER: Tracks the next order number to be generated.
+
+4. Main Procedure
+
+PUT SKIP LIST('ORDER UPDATE PROGRAM STARTED');
+CALL DISPLAY_MENU;
+
+DO UNTIL (WS_USER_INPUT = '03');  /* PF3 Key */
+   CALL ACCEPT_INPUT;
+
+   SELECT (WS_USER_INPUT);
+      WHEN ('03') DO;
+         PUT SKIP LIST('RETURNING TO MENU PROGRAM...');
+         STOP;
+      END;
+      WHEN ('ENTER') DO;
+         CALL VALIDATE_INPUT;
+         IF WS_VALID_FLAG = 'Y' THEN
+            CALL INSERT_ORDER;
+         ELSE
+            CALL DISPLAY_ERROR;
+      END;
+      OTHERWISE PUT SKIP LIST('INVALID PF KEY. PLEASE TRY AGAIN.');
+   END;
+END;
+
+STOP;
+
+
+Program Start:
+
+Displays the program title and menu using CALL DISPLAY_MENU.
+
+Main Loop:
+
+Repeats until the user presses PF3 to exit.
+Calls ACCEPT_INPUT to capture user inputs.
+Based on the input:
+PF3: Exits the program and returns to the menu.
+ENTER: Validates the input and inserts the order if valid; otherwise, displays an error.
+Invalid keys display an error message.
+
+5. Display Menu
+
+DISPLAY_MENU: PROCEDURE;
+   PUT SKIP LIST('---------------------------------------------');
+   PUT SKIP LIST('ORDER UPDATE PROGRAM');
+   PUT SKIP LIST('PAYMENT TYPE : ');
+   PUT SKIP LIST('ITEM CODE    : ');
+   PUT SKIP LIST('CUSTOMER CODE: ');
+   PUT SKIP LIST('ITEM QTY     : ');
+   PUT SKIP LIST('ENTER = TO PROCESS   PF3 = TO EXIT');
+   PUT SKIP LIST('---------------------------------------------');
+END DISPLAY_MENU;
+
+
+Displays the program interface with fields for payment type, item code, customer code, and item quantity.
+Provides instructions for processing (ENTER) or exiting (PF3).
+
+6. Accept Input
+
+ACCEPT_INPUT: PROCEDURE;
+   PUT SKIP LIST('ENTER PAYMENT TYPE (COD/NET): ');
+   CALL GET PAYMENT_TYPE;
+
+   PUT SKIP LIST('ENTER ITEM CODE: ');
+   CALL GET ITEM_CODE;
+
+   PUT SKIP LIST('ENTER CUSTOMER CODE: ');
+   CALL GET CUSTOMER_CODE;
+
+   PUT SKIP LIST('ENTER ITEM QUANTITY: ');
+   CALL GET ITEM_QTY;
+
+   PUT SKIP LIST('PRESS ENTER TO PROCESS OR PF3 TO EXIT');
+   CALL GET WS_USER_INPUT;
+END ACCEPT_INPUT;
+
+
+Prompts the user to enter values for payment type, item code, customer code, and item quantity.
+Captures the user's action (ENTER or PF3).
+
+7. Validate Input
+
+VALIDATE_INPUT: PROCEDURE;
+   WS_VALID_FLAG = 'N';
+   WS_ERROR_MESSAGE = '';
+
+   /* Validate Payment Type */
+   IF PAYMENT_TYPE NOT IN ('COD', 'NET') THEN DO;
+      WS_ERROR_MESSAGE = 'INVALID PAYMENT TYPE';
+      RETURN;
+   END;
+
+   /* Validate Item Code */
+   LOCATE FILE(ITEM_MASTER_FILE) KEY(ITEM_CODE);
+   READ FILE(ITEM_MASTER_FILE) INTO(ITEM_MASTER_RECORD);
+   IF FILESTATUS(ITEM_MASTER_FILE) ^= '00' THEN DO;
+      WS_ERROR_MESSAGE = 'ITEM CODE NOT FOUND';
+      RETURN;
+   END;
+
+   /* Validate Item Quantity */
+   IF ITEM_QTY > ITEM_STOCK_QTY THEN DO;
+      WS_ERROR_MESSAGE = 'ITEM QTY EXCEEDS STOCK';
+      RETURN;
+   END;
+
+   /* Validate Customer Code */
+   LOCATE FILE(CUSTOMER_MASTER_FILE) KEY(CUSTOMER_CODE);
+   READ FILE(CUSTOMER_MASTER_FILE) INTO(CUSTOMER_MASTER_RECORD);
+   IF FILESTATUS(CUSTOMER_MASTER_FILE) ^= '00' THEN DO;
+      WS_ERROR_MESSAGE = 'CUSTOMER CODE NOT FOUND';
+      RETURN;
+   END;
+
+   WS_VALID_FLAG = 'Y';
+END VALIDATE_INPUT;
+
+
+Payment Type: Must be COD or NET.
+Item Code: Must exist in the ITEM_MASTER_FILE.
+Item Quantity: Must not exceed the stock quantity in the ITEM_MASTER_FILE.
+Customer Code: Must exist in the CUSTOMER_MASTER_FILE.
+If any validation fails, an error message is set, and the procedure exits.
+
+8. Insert Order
+
+INSERT_ORDER: PROCEDURE;
+   ORDER_CODE = WS_ORDER_NUMBER;
+   WS_ORDER_NUMBER = WS_ORDER_NUMBER + 1;
+   ORDER_DATE = FUNCTION DATE();
+   WRITE FILE(ORDER_FILE) FROM(ORDER_RECORD);
+
+   IF FILESTATUS(ORDER_FILE) = '00' THEN
+      PUT SKIP LIST('ORDER INSERTED SUCCESSFULLY');
+   ELSE
+      PUT SKIP LIST('ERROR INSERTING ORDER');
+END INSERT_ORDER;
+
+Generates a unique ORDER_CODE.
+Sets the ORDER_DATE to the current system date using FUNCTION DATE().
+Writes the order record to the ORDER_FILE.
+Displays a success or error message based on the file operation status.
+
+9. Display Error
+
+DISPLAY_ERROR: PROCEDURE;
+   PUT SKIP LIST(WS_ERROR_MESSAGE);
+   PUT SKIP LIST('PLEASE CORRECT THE INPUT.');
+END DISPLAY_ERROR;
+
+Displays the error message stored in WS_ERROR_MESSAGE.
+Prompts the user to correct the input.
+
+10. Sample Execution
+
+Input:
+
+ENTER PAYMENT TYPE (COD/NET): COD
+ENTER ITEM CODE: 1234567
+ENTER CUSTOMER CODE: 7654321
+ENTER ITEM QUANTITY: 10
+PRESS ENTER TO PROCESS OR PF3 TO EXIT: ENTER
+
+Output:
+
+ORDER INSERTED SUCCESSFULLY
+
+Input:
+
+ENTER PAYMENT TYPE (COD/NET): XYZ
+ENTER ITEM CODE: 1234567
+ENTER CUSTOMER CODE: 7654321
+ENTER ITEM QUANTITY: 10
+PRESS ENTER TO PROCESS OR PF3 TO EXIT: ENTER
+
+Output:
+
+INVALID PAYMENT TYPE
+PLEASE CORRECT THE INPUT.
+
+This program ensures robust validation and error handling while maintaining a user-friendly interface. Let me know if you need further clarification!
+
+*********************************************************************
