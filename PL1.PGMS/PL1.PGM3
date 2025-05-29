@@ -1,5 +1,61 @@
 Here is the equivalent PL/I program for the Customer Details Update Program:
 
+/*
+ * CUSTOMER_DETAILS_UPDATE: PROCEDURE OPTIONS(MAIN)
+ * 
+ * This program is designed to manage customer records in a file. It provides
+ * functionalities to search, add, update, and delete customer records. The program
+ * interacts with the user through a menu-driven interface and performs file operations
+ * based on user input.
+ * 
+ * Features:
+ * - Search for a customer record by customer number.
+ * - Add a new customer record with validation for input fields.
+ * - Update an existing customer record.
+ * - Delete a customer record by customer number.
+ * - Return to the main menu or exit the program.
+ * 
+ * File Declarations:
+ * - CUSTOMER_FILE: File used to store customer records.
+ * - CUSTOMER_RECORD: Structure containing customer details such as number, name,
+ *   address, region, contact number, and email.
+ * 
+ * Working Storage Variables:
+ * - WS_USER_INPUT: Stores the user's menu choice.
+ * - WS_FLAG_EOF: Flag to indicate end of program execution.
+ * - WS_CUST_NO: Stores the customer number for operations.
+ * - WS_FOUND_FLAG: Flag to indicate if a customer record is found.
+ * 
+ * Procedures:
+ * - OPEN_FILES: Opens the customer file for direct access.
+ * - CLOSE_FILES: Closes the customer file.
+ * - DISPLAY_MENU: Displays the menu options to the user.
+ * - SEARCH_RECORD: Searches for a customer record by customer number and displays
+ *   the details if found.
+ * - ADD_RECORD: Adds a new customer record after validating input fields.
+ * - UPDATE_RECORD: Updates an existing customer record if found.
+ * - DELETE_RECORD: Deletes a customer record by customer number if found.
+ * - RETURN_TO_MENU: Returns to the main menu and sets the EOF flag to terminate
+ *   the program loop.
+ * - VALIDATE_INPUT: Validates user input for adding or updating customer records.
+ *   Ensures fields like customer number, name, address, region, contact number,
+ *   and email meet the required criteria.
+ * 
+ * Input Validation:
+ * - Customer number must be numeric.
+ * - Customer name and address cannot be blank.
+ * - Customer region must be one of the predefined values (MUM, DEL, BNG, CHE, HYD).
+ * - Contact number must be numeric and exactly 10 digits.
+ * - Email must contain exactly one '@' character.
+ * 
+ * Error Handling:
+ * - Displays appropriate error messages for invalid input or operations.
+ * - Handles cases where customer records are not found during search, update, or delete.
+ * 
+ * Usage:
+ * - Run the program and follow the menu prompts to perform desired operations.
+ * - Ensure the customer file is accessible and properly formatted for the program.
+ */
 /* filepath: c:\Users\AVCHARIT\OneDrive - Capgemini\Documents\copilot\Charitha\customer_details_update.pl1 */
 CUSTOMER_DETAILS_UPDATE: PROCEDURE OPTIONS(MAIN);
 
